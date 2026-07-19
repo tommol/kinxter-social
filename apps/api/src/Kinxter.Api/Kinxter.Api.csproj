@@ -6,4 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../modules/Kinxter.Accounts/Kinxter.Accounts.csproj" />
+    <ProjectReference Include="../modules/Kinxter.Profiles/Kinxter.Profiles.csproj" />
+    <ProjectReference Include="../shared/Kinxter.Shared.Infrastructure/Kinxter.Shared.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>

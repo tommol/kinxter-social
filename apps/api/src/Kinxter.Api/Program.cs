@@ -1,8 +1,17 @@
+using Kinxter.Accounts;
+using Kinxter.Api;
+using Kinxter.Profiles;
+using Kinxter.Shared.Infrastructure.DependencyInjection;
+
 var builder = WebApplication.CreateBuilder(args);
 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<string[]>() ?? ["http://localhost:3000"];
+
+builder.Services.AddSharedInfrastructure();
+builder.Services.AddAccountsModule();
+builder.Services.AddProfilesModule();
 
 builder.Services.AddCors(options =>
 {
@@ -24,5 +33,7 @@ app.MapGet("/health", () => Results.Ok(new
     status = "ok",
     service = "Kinxter.Api"
 }));
+
+app.MapApiV1();
 
 app.Run();

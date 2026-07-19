@@ -2,4 +2,15 @@
   <Folder Name="/src/">
     <Project Path="src/Kinxter.Api/Kinxter.Api.csproj" />
   </Folder>
+  <Folder Name="/src/modules/">
+    <Project Path="src/modules/Kinxter.Accounts/Kinxter.Accounts.csproj" />
+    <Project Path="src/modules/Kinxter.Profiles/Kinxter.Profiles.csproj" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="src/shared/Kinxter.Shared.Abstractions/Kinxter.Shared.Abstractions.csproj" />
+    <Project Path="src/shared/Kinxter.Shared.Infrastructure/Kinxter.Shared.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Kinxter.UnitTests/Kinxter.UnitTests.csproj" />
+  </Folder>
 </Solution>
