@@ -1,0 +1,19 @@
+{
+  "name": "kinxter-social",
+  "version": "0.1.0",
+  "description": "Kinxter Social monorepo.",
+  "private": true,
+  "scripts": {
+    "api:build": "dotnet build apps/api/Kinxter.slnx",
+    "api:run": "dotnet run --project apps/api/src/Kinxter.Api/Kinxter.Api.csproj",
+    "web:dev": "pnpm --filter @kinxter/web dev",
+    "web:build": "pnpm --filter @kinxter/web build",
+    "web:start": "pnpm --filter @kinxter/web start",
+    "containers:up": "docker compose -f deploy/containers/docker-compose.yml up --build",
+    "containers:down": "docker compose -f deploy/containers/docker-compose.yml down"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.32.0"
+}

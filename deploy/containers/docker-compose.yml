@@ -1,0 +1,28 @@
+name: kinxter-social
+
+services:
+  api:
+    image: kinxter-api:local
+    build:
+      context: ../..
+      dockerfile: deploy/containers/Kinxter.Api.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+      Cors__AllowedOrigins__0: http://localhost:3000
+    ports:
+      - "8080:8080"
+
+  web:
+    image: kinxter-web:local
+    build:
+      context: ../..
+      dockerfile: deploy/containers/Kinxter.Web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
