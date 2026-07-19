@@ -13,6 +13,7 @@ internal static class RegisterAccountEndpoint
     {
         app.MapPost("/register", HandleAsync)
             .WithName("RegisterAccount")
+            .WithSummary("Registers a new account.")
             .Produces<RegisterAccountResponseDto>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);

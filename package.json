@@ -9,8 +9,9 @@
     "web:dev": "pnpm --filter @kinxter/web dev",
     "web:build": "pnpm --filter @kinxter/web build",
     "web:start": "pnpm --filter @kinxter/web start",
-    "containers:up": "docker compose -f deploy/containers/docker-compose.yml up --build",
-    "containers:down": "docker compose -f deploy/containers/docker-compose.yml down"
+    "test:functional": "node --test tests/functional/*.test.mjs",
+    "containers:up": "podman compose -f deploy/containers/docker-compose.yml up --build",
+    "containers:down": "podman compose -f deploy/containers/docker-compose.yml down"
   },
   "keywords": [],
   "author": "",

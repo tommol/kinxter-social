@@ -4,6 +4,8 @@ namespace Kinxter.Shared.Abstractions.Outbox;
 
 public interface IOutboxEventSerializer
 {
+    SerializedOutboxEvent Serialize(IModuleEvent moduleEvent);
+
     SerializedOutboxEvent Serialize<TEvent>(TEvent moduleEvent)
         where TEvent : IModuleEvent;
 

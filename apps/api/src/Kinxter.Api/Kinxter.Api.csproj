@@ -7,6 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.13" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../modules/Kinxter.Accounts/Kinxter.Accounts.csproj" />
     <ProjectReference Include="../modules/Kinxter.Profiles/Kinxter.Profiles.csproj" />
     <ProjectReference Include="../shared/Kinxter.Shared.Infrastructure/Kinxter.Shared.Infrastructure.csproj" />

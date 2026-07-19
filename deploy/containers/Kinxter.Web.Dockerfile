@@ -15,13 +15,11 @@ COPY apps/web/package.json apps/web/package.json
 
 RUN pnpm install --filter @kinxter/web... --frozen-lockfile
 
-FROM base AS build
+FROM deps AS build
 
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY . .
 
 RUN pnpm --filter @kinxter/web build

@@ -8,17 +8,25 @@ internal sealed class JsonOutboxEventSerializer : IOutboxEventSerializer
 {
     private static readonly JsonSerializerOptions JsonSerializerOptions = new(JsonSerializerDefaults.Web);
 
+    public SerializedOutboxEvent Serialize(IModuleEvent moduleEvent)
+    {
+        ArgumentNullException.ThrowIfNull(moduleEvent);
+
+        var eventType = moduleEvent.GetType();
+        var serializedEventType = eventType.AssemblyQualifiedName
+            ?? throw new InvalidOperationException($"Event type '{eventType.FullName}' cannot be serialized.");
+
+        var payload = JsonSerializer.Serialize(moduleEvent, eventType, JsonSerializerOptions);
+
+        return new SerializedOutboxEvent(serializedEventType, payload);
+    }
+
     public SerializedOutboxEvent Serialize<TEvent>(TEvent moduleEvent)
         where TEvent : IModuleEvent
     {
         ArgumentNullException.ThrowIfNull(moduleEvent);
 
-        var eventType = typeof(TEvent).AssemblyQualifiedName
-            ?? throw new InvalidOperationException($"Event type '{typeof(TEvent).FullName}' cannot be serialized.");
-
-        var payload = JsonSerializer.Serialize(moduleEvent, typeof(TEvent), JsonSerializerOptions);
-
-        return new SerializedOutboxEvent(eventType, payload);
+        return Serialize((IModuleEvent)moduleEvent);
     }
 
     public IModuleEvent Deserialize(string eventType, string payload)
