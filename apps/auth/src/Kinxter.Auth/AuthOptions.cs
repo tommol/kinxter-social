@@ -26,6 +26,8 @@ internal sealed class AuthOptions
 
     public AuthClientOptions[] Clients { get; init; } = [];
 
+    public AuthExternalProvidersOptions ExternalProviders { get; init; } = new();
+
     public SeedAdminOptions SeedAdmin { get; init; } = new();
 
     public bool RequiresMfa => MfaPolicy == AuthMfaPolicy.Required;
@@ -59,7 +61,49 @@ internal sealed class AuthOptions
             AllowedOrigins = section.GetSection("AllowedOrigins").Get<string[]>() ??
                 (realm == AuthRealms.Backoffice ? ["http://localhost:3001"] : ["http://localhost:3000"]),
             Clients = GetClients(section, realm),
+            ExternalProviders = GetExternalProviders(section.GetSection("ExternalProviders")),
             SeedAdmin = GetSeedAdmin(section.GetSection("SeedAdmin"))
+        };
+    }
+
+    private static AuthExternalProvidersOptions GetExternalProviders(IConfiguration section)
+    {
+        return new AuthExternalProvidersOptions
+        {
+            Google = GetExternalProvider(
+                section.GetSection(AuthExternalProviderNames.Google),
+                AuthExternalProviderNames.Google,
+                "Google"),
+            Apple = GetAppleExternalProvider(section.GetSection(AuthExternalProviderNames.Apple))
+        };
+    }
+
+    private static AuthExternalProviderOptions GetExternalProvider(
+        IConfiguration section,
+        string provider,
+        string displayName)
+    {
+        return new AuthExternalProviderOptions
+        {
+            Provider = provider,
+            DisplayName = GetString(section, "DisplayName", displayName),
+            Enabled = GetBool(section, "Enabled", false),
+            ClientId = GetString(section, "ClientId", ""),
+            ClientSecret = GetString(section, "ClientSecret", "")
+        };
+    }
+
+    private static AuthAppleExternalProviderOptions GetAppleExternalProvider(IConfiguration section)
+    {
+        return new AuthAppleExternalProviderOptions
+        {
+            Provider = AuthExternalProviderNames.Apple,
+            DisplayName = GetString(section, "DisplayName", "Apple"),
+            Enabled = GetBool(section, "Enabled", false),
+            ClientId = GetString(section, "ClientId", ""),
+            TeamId = GetString(section, "TeamId", ""),
+            KeyId = GetString(section, "KeyId", ""),
+            PrivateKeyPem = GetString(section, "PrivateKeyPem", "")
         };
     }
 
@@ -170,6 +214,83 @@ internal sealed class AuthClientOptions
     public string[] PostLogoutRedirectUris { get; init; } = [];
 
     public string[] Scopes { get; init; } = [];
+}
+
+internal sealed class AuthExternalProvidersOptions
+{
+    public AuthExternalProviderOptions Google { get; init; } = new()
+    {
+        Provider = AuthExternalProviderNames.Google,
+        DisplayName = "Google"
+    };
+
+    public AuthAppleExternalProviderOptions Apple { get; init; } = new()
+    {
+        Provider = AuthExternalProviderNames.Apple,
+        DisplayName = "Apple"
+    };
+
+    public IEnumerable<AuthExternalProviderOptions> EnabledProviders =>
+        AllProviders.Where(provider => provider.Enabled);
+
+    public IEnumerable<AuthExternalProviderOptions> ConfiguredProviders =>
+        AllProviders.Where(provider => provider.Enabled && provider.IsConfigured);
+
+    public AuthExternalProviderOptions? Find(string provider)
+    {
+        return AllProviders.SingleOrDefault(current =>
+            string.Equals(current.Provider, provider, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private IEnumerable<AuthExternalProviderOptions> AllProviders
+    {
+        get
+        {
+            yield return Google;
+            yield return Apple;
+        }
+    }
+}
+
+internal class AuthExternalProviderOptions
+{
+    public string Provider { get; init; } = "";
+
+    public string AuthenticationScheme => Provider;
+
+    public string DisplayName { get; init; } = "";
+
+    public bool Enabled { get; init; }
+
+    public string ClientId { get; init; } = "";
+
+    public string ClientSecret { get; init; } = "";
+
+    public virtual bool IsConfigured =>
+        !string.IsNullOrWhiteSpace(ClientId) &&
+        !string.IsNullOrWhiteSpace(ClientSecret);
+}
+
+internal sealed class AuthAppleExternalProviderOptions : AuthExternalProviderOptions
+{
+    public string TeamId { get; init; } = "";
+
+    public string KeyId { get; init; } = "";
+
+    public string PrivateKeyPem { get; init; } = "";
+
+    public override bool IsConfigured =>
+        !string.IsNullOrWhiteSpace(ClientId) &&
+        !string.IsNullOrWhiteSpace(TeamId) &&
+        !string.IsNullOrWhiteSpace(KeyId) &&
+        !string.IsNullOrWhiteSpace(PrivateKeyPem);
+}
+
+internal static class AuthExternalProviderNames
+{
+    public const string Google = "Google";
+
+    public const string Apple = "Apple";
 }
 
 internal sealed class SeedAdminOptions

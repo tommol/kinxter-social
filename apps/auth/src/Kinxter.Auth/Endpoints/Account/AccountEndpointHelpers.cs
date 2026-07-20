@@ -21,4 +21,33 @@ internal static partial class AccountEndpoints
             ? "/"
             : returnUrl;
     }
+
+    private static AuthExternalProviderOptions? GetConfiguredExternalProvider(
+        AuthOptions options,
+        string provider)
+    {
+        var externalProvider = options.ExternalProviders.Find(provider);
+
+        return externalProvider is { Enabled: true, IsConfigured: true }
+            ? externalProvider
+            : null;
+    }
+
+    private static string BuildAccountPath(HttpContext context, string path)
+    {
+        return $"{context.Request.PathBase}{path}";
+    }
+
+    private static string BuildExternalCallbackPath(
+        HttpContext context,
+        string returnUrl,
+        bool link)
+    {
+        var path = BuildAccountPath(context, "/account/external-callback");
+        var callback = $"{path}?returnUrl={Uri.EscapeDataString(returnUrl)}";
+
+        return link
+            ? $"{callback}&link=true"
+            : callback;
+    }
 }

@@ -15,7 +15,7 @@ internal static class AuthHtml
               <dt>Issuer</dt><dd>{Encode(options.Issuer)}</dd>
               <dt>MFA policy</dt><dd>{Encode(options.MfaPolicy.ToString())}</dd>
             </dl>
-            <p><a href="/account/login">Sign in</a>{(options.SignupEnabled ? " · <a href=\"/account/register\">Create account</a>" : "")}</p>
+            <p><a href="{Path(options, "/account/login")}">Sign in</a>{(options.SignupEnabled ? $" · <a href=\"{Path(options, "/account/register")}\">Create account</a>" : "")}</p>
             """);
     }
 
@@ -31,30 +31,32 @@ internal static class AuthHtml
             $"""
             <h1>Create account</h1>
             {Error(error)}
+            {ExternalLoginButtons(options, returnUrl)}
             <form method="post">
               <input type="hidden" name="returnUrl" value="{Encode(returnUrl ?? "/")}">
               <label>Email <input type="email" name="email" autocomplete="email" required></label>
               <label>Password <input type="password" name="password" autocomplete="new-password" required></label>
               <button type="submit">Create account</button>
             </form>
-            <p><a href="/account/login?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}">Sign in</a></p>
+            <p><a href="{Path(options, "/account/login")}?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}">Sign in</a></p>
             """);
     }
 
-    public static string Login(string? returnUrl, string? error = null)
+    public static string Login(AuthOptions options, string? returnUrl, string? error = null)
     {
         return Page(
             "Sign in",
             $"""
             <h1>Sign in</h1>
             {Error(error)}
+            {ExternalLoginButtons(options, returnUrl)}
             <form method="post">
               <input type="hidden" name="returnUrl" value="{Encode(returnUrl ?? "/")}">
               <label>Email <input type="email" name="email" autocomplete="email" required></label>
               <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
               <button type="submit">Sign in</button>
             </form>
-            <p><a href="/account/register?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}">Create account</a></p>
+            {(options.SignupEnabled ? $"<p><a href=\"{Path(options, "/account/register")}?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}\">Create account</a></p>" : "")}
             """);
     }
 
@@ -111,6 +113,9 @@ internal static class AuthHtml
             label{display:block;margin:14px 0 6px;font-size:14px;font-weight:600}
             input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #c8d0d8;border-radius:6px;font:inherit}
             button{margin-top:18px;padding:10px 14px;border:0;border-radius:6px;background:#1f6f5b;color:#fff;font-weight:700}
+            .external-logins{display:grid;gap:8px;margin:0 0 20px}
+            .external-logins form{margin:0}
+            .external-logins button{width:100%;margin:0;background:#182026}
             code{display:block;overflow:auto;padding:10px;border-radius:6px;background:#eef3f7}
             .error{color:#b42318;background:#fff0ee;padding:10px;border-radius:6px}
             dl{display:grid;grid-template-columns:96px 1fr;gap:8px}
@@ -128,6 +133,35 @@ internal static class AuthHtml
         return string.IsNullOrWhiteSpace(error)
             ? ""
             : $"""<p class="error">{Encode(error)}</p>""";
+    }
+
+    private static string ExternalLoginButtons(AuthOptions options, string? returnUrl)
+    {
+        var providers = options.ExternalProviders.ConfiguredProviders.ToArray();
+
+        if (providers.Length == 0)
+        {
+            return "";
+        }
+
+        var buttons = string.Join(
+            Environment.NewLine,
+            providers.Select(provider =>
+                $"""
+                <form method="post" action="{Path(options, $"/account/external-login/{provider.Provider.ToLowerInvariant()}")}">
+                  <input type="hidden" name="returnUrl" value="{Encode(returnUrl ?? "/")}">
+                  <button type="submit">Continue with {Encode(provider.DisplayName)}</button>
+                </form>
+                """));
+
+        return $"""<div class="external-logins">{buttons}</div>""";
+    }
+
+    private static string Path(AuthOptions options, string path)
+    {
+        return string.IsNullOrWhiteSpace(options.PathBase)
+            ? path
+            : $"{options.PathBase}{path}";
     }
 
     private static string Encode(string value) => WebUtility.HtmlEncode(value);

@@ -26,14 +26,9 @@ internal static partial class OpenIddictEndpoints
             return Results.Challenge(authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme]);
         }
 
-        return Results.Ok(new
-        {
-            sub = user.Id.ToString("D"),
-            email = user.Email,
-            email_verified = user.EmailConfirmed,
-            name = user.UserName,
-            preferred_username = user.UserName,
-            realm = user.Realm
-        });
+        var roles = await userManager.GetRolesAsync(user);
+        var claims = UserInfoClaimsFactory.Create(user, result.Principal!, roles);
+
+        return Results.Ok(claims);
     }
 }

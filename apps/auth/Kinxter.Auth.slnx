@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Kinxter.Auth/Kinxter.Auth.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Kinxter.Auth.Tests/Kinxter.Auth.Tests.csproj" />
+  </Folder>
 </Solution>

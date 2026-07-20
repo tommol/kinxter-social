@@ -21,7 +21,7 @@ internal static partial class AccountEndpoints
 
         if (user is null || user.Realm != options.Realm || user.DeletedAt is not null || user.DisabledAt is not null)
         {
-            return Results.Content(AuthHtml.Login(returnUrl, "Invalid credentials."), "text/html");
+            return Results.Content(AuthHtml.Login(options, returnUrl, "Invalid credentials."), "text/html");
         }
 
         var result = await signInManager.PasswordSignInAsync(
@@ -45,6 +45,6 @@ internal static partial class AccountEndpoints
             return Results.Redirect(returnUrl);
         }
 
-        return Results.Content(AuthHtml.Login(returnUrl, "Invalid credentials."), "text/html");
+        return Results.Content(AuthHtml.Login(options, returnUrl, "Invalid credentials."), "text/html");
     }
 }

@@ -1,7 +1,10 @@
 using Kinxter.Auth.Infrastructure.Persistence;
 using Kinxter.Shared.Infrastructure.DependencyInjection;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
@@ -63,6 +66,8 @@ internal static class AuthServiceCollectionExtensions
             options.SlidingExpiration = true;
         });
 
+        services.AddConfiguredExternalAuthenticationProviders(authOptions);
+
         services.Configure<IdentityPasskeyOptions>(options =>
         {
             options.ServerDomain = configuration["Auth:Passkeys:ServerDomain"];
@@ -115,8 +120,67 @@ internal static class AuthServiceCollectionExtensions
 
         services.AddAuthorization();
         services.AddScoped<AuthIntegrationEventPublisher>();
+        services.AddScoped<ExternalLoginAccountManager>();
 
         return services;
+    }
+
+    private static void AddConfiguredExternalAuthenticationProviders(
+        this IServiceCollection services,
+        AuthOptions authOptions)
+    {
+        var authentication = services.AddAuthentication();
+
+        foreach (var provider in authOptions.ExternalProviders.EnabledProviders)
+        {
+            if (!provider.IsConfigured)
+            {
+                throw new InvalidOperationException(
+                    $"External login provider '{provider.Provider}' is enabled but its configuration is incomplete.");
+            }
+        }
+
+        var google = authOptions.ExternalProviders.Google;
+
+        if (google.Enabled)
+        {
+            authentication.AddGoogle(google.AuthenticationScheme, google.DisplayName, options =>
+            {
+                options.SignInScheme = IdentityConstants.ExternalScheme;
+                options.ClientId = google.ClientId;
+                options.ClientSecret = google.ClientSecret;
+                options.SaveTokens = false;
+
+                if (!options.Scope.Contains("email"))
+                {
+                    options.Scope.Add("email");
+                }
+
+                options.ClaimActions.MapUniqueJsonKey("email_verified", "verified_email");
+            });
+        }
+
+        var apple = authOptions.ExternalProviders.Apple;
+
+        if (apple.Enabled)
+        {
+            authentication.AddOpenIdConnect(apple.AuthenticationScheme, apple.DisplayName, options =>
+            {
+                options.SignInScheme = IdentityConstants.ExternalScheme;
+                options.Authority = "https://appleid.apple.com";
+                options.CallbackPath = "/signin-apple";
+                options.ClientId = apple.ClientId;
+                options.ClientSecret = AppleClientSecretFactory.Create(apple);
+                options.ResponseType = OpenIdConnectResponseType.Code;
+                options.SaveTokens = false;
+                options.Scope.Clear();
+                options.Scope.Add(Scopes.OpenId);
+                options.Scope.Add(Scopes.Email);
+                options.Scope.Add(Scopes.Profile);
+                options.GetClaimsFromUserInfoEndpoint = false;
+                options.TokenValidationParameters.NameClaimType = Claims.Name;
+            });
+        }
     }
 }
 
