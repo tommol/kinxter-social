@@ -1,0 +1,19 @@
+@model Kinxter.Auth.Rendering.Models.AuthRealmHomeViewModel
+@{
+    Layout = "/Views/Auth/_Layout.cshtml";
+    ViewData["Title"] = "Kinxter Auth";
+}
+<h1>Kinxter Auth</h1>
+<dl>
+  <dt>Realm</dt><dd>@Model.Realm</dd>
+  <dt>Issuer</dt><dd>@Model.Issuer</dd>
+  <dt>MFA policy</dt><dd>@Model.MfaPolicy</dd>
+</dl>
+<p>
+  <a href="@Model.LoginPath">Sign in</a>
+  @if (Model.SignupEnabled)
+  {
+    <span>|</span>
+    <a href="@Model.RegisterPath">Create account</a>
+  }
+</p>

@@ -7,10 +7,12 @@ internal static partial class AccountEndpoints
 {
     private static async Task<IResult> ForgotPasswordAsync(
         ForgotPasswordRequest request,
+        AuthDbContext dbContext,
         UserManager<AuthUser> userManager,
+        AuthOptions options,
         IWebHostEnvironment environment)
     {
-        var user = await userManager.FindByEmailAsync(request.Email.Trim());
+        var user = await userManager.FindByEmailInRealmAsync(dbContext, options, request.Email);
 
         if (user is null || user.Email is null)
         {

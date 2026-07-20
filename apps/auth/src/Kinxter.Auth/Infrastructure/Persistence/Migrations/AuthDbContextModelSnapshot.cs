@@ -22,6 +22,104 @@ namespace Kinxter.Auth.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Kinxter.Auth.Infrastructure.Persistence.AuthClient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("ClientSecretConfigured")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.PrimitiveCollection<string[]>("PostLogoutRedirectUris")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<Guid>("RealmId")
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string[]>("RedirectUris")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.PrimitiveCollection<string[]>("Scopes")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("RealmId", "ClientId")
+                        .IsUnique();
+
+                    b.ToTable("AuthClients", (string)null);
+                });
+
+            modelBuilder.Entity("Kinxter.Auth.Infrastructure.Persistence.AuthRealm", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("MfaPolicy")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PathBase")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("SignupEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("PathBase")
+                        .IsUnique();
+
+                    b.ToTable("AuthRealms", (string)null);
+                });
+
             modelBuilder.Entity("Kinxter.Auth.Infrastructure.Persistence.AuthUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -95,11 +193,14 @@ namespace Kinxter.Auth.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("EmailIndex");
 
                     b.HasIndex("NormalizedUserName")
-                        .IsUnique()
-                        .HasDatabaseName("UserNameIndex");
+                        .HasDatabaseName("IX_AspNetUsers_NormalizedUserName");
 
                     b.HasIndex("Realm", "NormalizedEmail")
                         .IsUnique();
+
+                    b.HasIndex("Realm", "NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -442,6 +543,17 @@ namespace Kinxter.Auth.Infrastructure.Persistence.Migrations
                     b.ToTable("OpenIddictTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Kinxter.Auth.Infrastructure.Persistence.AuthClient", b =>
+                {
+                    b.HasOne("Kinxter.Auth.Infrastructure.Persistence.AuthRealm", "Realm")
+                        .WithMany("Clients")
+                        .HasForeignKey("RealmId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Realm");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
@@ -515,6 +627,11 @@ namespace Kinxter.Auth.Infrastructure.Persistence.Migrations
                     b.Navigation("Application");
 
                     b.Navigation("Authorization");
+                });
+
+            modelBuilder.Entity("Kinxter.Auth.Infrastructure.Persistence.AuthRealm", b =>
+                {
+                    b.Navigation("Clients");
                 });
 
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication", b =>

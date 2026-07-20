@@ -10,13 +10,14 @@ internal static partial class AccountEndpoints
         string code,
         UserManager<AuthUser> userManager,
         AuthIntegrationEventPublisher eventPublisher,
+        AuthOptions options,
         CancellationToken cancellationToken)
     {
         var user = Guid.TryParse(userId, out var parsedUserId)
             ? await userManager.FindByIdAsync(parsedUserId.ToString("D"))
             : null;
 
-        if (user is null)
+        if (user is null || user.Realm != options.Realm)
         {
             return Results.NotFound();
         }

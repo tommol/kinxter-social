@@ -31,13 +31,13 @@ internal static class ApiAuthenticationExtensions
             {
                 policy.AddAuthenticationSchemes(ApiAuthenticationSchemes.PublicRealm);
                 policy.RequireAuthenticatedUser();
-                policy.RequireAssertion(context => HasScope(context, "kinxter.api") && HasRealm(context, "public"));
+                policy.RequireAssertion(context => HasScope(context, "kinxter.api") && HasRealm(context, options.PublicRealm));
             })
             .AddPolicy(ApiAuthorizationPolicies.BackofficeAdmin, policy =>
             {
                 policy.AddAuthenticationSchemes(ApiAuthenticationSchemes.BackofficeRealm);
                 policy.RequireAuthenticatedUser();
-                policy.RequireAssertion(context => HasScope(context, "kinxter.admin") && HasRealm(context, "backoffice"));
+                policy.RequireAssertion(context => HasScope(context, "kinxter.admin") && HasRealm(context, options.BackofficeRealm));
             });
 
         return services;

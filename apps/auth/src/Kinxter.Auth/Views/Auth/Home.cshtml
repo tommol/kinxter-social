@@ -1,0 +1,12 @@
+@model Kinxter.Auth.Rendering.Models.AuthServerHomeViewModel
+@{
+    Layout = "/Views/Auth/_Layout.cshtml";
+    ViewData["Title"] = "Kinxter Auth";
+}
+<h1>Kinxter Auth</h1>
+<ul class="realm-list">
+@foreach (var realm in Model.Realms)
+{
+  <li><a href="@realm.PathBase/">@realm.Realm</a></li>
+}
+</ul>

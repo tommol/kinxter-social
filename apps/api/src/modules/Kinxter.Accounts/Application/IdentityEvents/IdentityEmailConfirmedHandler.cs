@@ -22,7 +22,7 @@ internal sealed class IdentityEmailConfirmedHandler : IModuleEventHandler<Identi
 
         var account = await this.dbContext.Accounts
             .SingleOrDefaultAsync(current =>
-                current.IdentityProvider == GetIdentityProvider(moduleEvent.Realm) &&
+                current.IdentityProvider == KinxterAuthIdentityProvider.ForRealm(moduleEvent.Realm) &&
                 current.IdentitySubject == moduleEvent.Subject,
                 cancellationToken);
 
@@ -35,6 +35,4 @@ internal sealed class IdentityEmailConfirmedHandler : IModuleEventHandler<Identi
 
         await this.dbContext.SaveChangesAsync(cancellationToken);
     }
-
-    private static string GetIdentityProvider(string realm) => $"kinxter-auth:{realm}";
 }

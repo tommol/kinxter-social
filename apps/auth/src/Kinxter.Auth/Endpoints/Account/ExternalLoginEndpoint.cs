@@ -10,6 +10,7 @@ internal static partial class AccountEndpoints
         HttpContext context,
         SignInManager<AuthUser> signInManager,
         AuthOptions options,
+        AuthPageRenderer renderer,
         CancellationToken cancellationToken)
     {
         var form = await context.Request.ReadFormAsync(cancellationToken);
@@ -18,9 +19,7 @@ internal static partial class AccountEndpoints
 
         if (externalProvider is null)
         {
-            return Results.Content(
-                AuthHtml.Login(options, returnUrl, "External login provider is not available."),
-                "text/html");
+            return await renderer.LoginAsync(context, options, returnUrl, "External login provider is not available.");
         }
 
         var callbackPath = BuildExternalCallbackPath(context, returnUrl, link: false);

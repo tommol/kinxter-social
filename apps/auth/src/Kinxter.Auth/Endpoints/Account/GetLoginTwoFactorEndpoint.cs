@@ -2,8 +2,11 @@ namespace Kinxter.Auth;
 
 internal static partial class AccountEndpoints
 {
-    private static IResult GetLoginTwoFactorAsync(string? returnUrl)
+    private static Task<IResult> GetLoginTwoFactorAsync(
+        string? returnUrl,
+        HttpContext context,
+        AuthPageRenderer renderer)
     {
-        return Results.Content(AuthHtml.LoginTwoFactor(returnUrl), "text/html");
+        return renderer.LoginTwoFactorAsync(context, returnUrl);
     }
 }

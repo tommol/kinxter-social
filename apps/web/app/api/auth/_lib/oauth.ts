@@ -125,7 +125,13 @@ export function logout(request: NextRequest) {
 }
 
 function getIssuer() {
-  return (process.env.AUTH_ISSUER ?? "http://localhost:8081/realms/public").replace(/\/$/, "");
+  const issuer = process.env.AUTH_ISSUER;
+
+  if (!issuer) {
+    throw new Error("AUTH_ISSUER must be configured.");
+  }
+
+  return issuer.replace(/\/$/, "");
 }
 
 function getClientId() {

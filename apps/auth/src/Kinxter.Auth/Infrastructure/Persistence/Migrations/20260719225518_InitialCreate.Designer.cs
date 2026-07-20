@@ -98,6 +98,9 @@ namespace Kinxter.Auth.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("EmailIndex");
 
                     b.HasIndex("NormalizedUserName")
+                        .HasDatabaseName("IX_AspNetUsers_NormalizedUserName");
+
+                    b.HasIndex("Realm", "NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 

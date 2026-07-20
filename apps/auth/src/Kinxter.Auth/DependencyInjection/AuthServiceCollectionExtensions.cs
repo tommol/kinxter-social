@@ -1,5 +1,6 @@
 using Kinxter.Auth.Infrastructure.Persistence;
 using Kinxter.Shared.Infrastructure.DependencyInjection;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Identity;
@@ -18,7 +19,7 @@ internal static class AuthServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration,
         IWebHostEnvironment environment,
-        AuthOptions authOptions)
+        AuthServerOptions authOptions)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(environment);
@@ -26,10 +27,21 @@ internal static class AuthServiceCollectionExtensions
 
         var connectionString = configuration.GetConnectionString("Postgres")
             ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
-        var issuerUsesHttps = Uri.TryCreate(authOptions.Issuer, UriKind.Absolute, out var issuerUri) &&
-            issuerUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        var requiresHttps = authOptions.Realms.All(realm =>
+            Uri.TryCreate(realm.Issuer, UriKind.Absolute, out var issuerUri) &&
+            issuerUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase));
+        var strictestRealm = authOptions.Realms.Any(realm => realm.RequiresMfa);
 
         services.AddSingleton(authOptions);
+        services.AddHttpContextAccessor();
+        services.AddControllersWithViews();
+        services.AddScoped(services =>
+        {
+            var context = services.GetRequiredService<IHttpContextAccessor>().HttpContext;
+            var realmOptions = context?.GetAuthRealmOptions();
+
+            return realmOptions ?? throw new InvalidOperationException("The auth realm could not be resolved from the current request.");
+        });
         services.AddSharedInfrastructure(configuration);
 
         services.AddDbContext<AuthDbContext>(options =>
@@ -42,11 +54,11 @@ internal static class AuthServiceCollectionExtensions
             .AddIdentity<AuthUser, IdentityRole<Guid>>(options =>
             {
                 options.SignIn.RequireConfirmedEmail = false;
-                options.User.RequireUniqueEmail = true;
+                options.User.RequireUniqueEmail = false;
                 options.Lockout.AllowedForNewUsers = true;
-                options.Lockout.MaxFailedAccessAttempts = authOptions.RequiresMfa ? 5 : 8;
-                options.Password.RequiredLength = authOptions.RequiresMfa ? 12 : 10;
-                options.Password.RequireNonAlphanumeric = authOptions.RequiresMfa;
+                options.Lockout.MaxFailedAccessAttempts = strictestRealm ? 5 : 8;
+                options.Password.RequiredLength = strictestRealm ? 12 : 10;
+                options.Password.RequireNonAlphanumeric = strictestRealm;
                 options.Tokens.AuthenticatorTokenProvider = TokenOptions.DefaultAuthenticatorProvider;
             })
             .AddEntityFrameworkStores<AuthDbContext>()
@@ -57,7 +69,7 @@ internal static class AuthServiceCollectionExtensions
             options.Cookie.Name = authOptions.CookieName;
             options.Cookie.HttpOnly = true;
             options.Cookie.SameSite = SameSiteMode.Lax;
-            options.Cookie.SecurePolicy = issuerUsesHttps
+            options.Cookie.SecurePolicy = requiresHttps
                 ? CookieSecurePolicy.Always
                 : CookieSecurePolicy.SameAsRequest;
             options.LoginPath = "/account/login";
@@ -83,7 +95,6 @@ internal static class AuthServiceCollectionExtensions
             })
             .AddServer(options =>
             {
-                options.SetIssuer(new Uri(authOptions.Issuer));
                 options.SetAuthorizationEndpointUris("/connect/authorize")
                     .SetEndSessionEndpointUris("/connect/logout")
                     .SetPushedAuthorizationEndpointUris("/connect/par")
@@ -112,26 +123,58 @@ internal static class AuthServiceCollectionExtensions
                     .EnableTokenEndpointPassthrough()
                     .EnableUserInfoEndpointPassthrough();
 
-                if (!issuerUsesHttps)
+                if (!requiresHttps)
                 {
                     aspNetCore.DisableTransportSecurityRequirement();
                 }
+
+                options.AddEventHandler<OpenIddict.Server.OpenIddictServerEvents.HandleConfigurationRequestContext>(builder =>
+                {
+                    builder.SetOrder(int.MaxValue);
+                    builder.UseInlineHandler(context =>
+                    {
+                        var httpRequest = context.Transaction.GetHttpRequest();
+                        var realmOptions = httpRequest?.HttpContext.GetAuthRealmOptions();
+
+                        if (realmOptions is null)
+                        {
+                            return default;
+                        }
+
+                        context.Issuer = new Uri(realmOptions.Issuer);
+                        context.AuthorizationEndpoint = BuildRealmEndpoint(realmOptions, "/connect/authorize");
+                        context.TokenEndpoint = BuildRealmEndpoint(realmOptions, "/connect/token");
+                        context.EndSessionEndpoint = BuildRealmEndpoint(realmOptions, "/connect/logout");
+                        context.PushedAuthorizationEndpoint = BuildRealmEndpoint(realmOptions, "/connect/par");
+                        context.RevocationEndpoint = BuildRealmEndpoint(realmOptions, "/connect/revocation");
+                        context.UserInfoEndpoint = BuildRealmEndpoint(realmOptions, "/connect/userinfo");
+                        context.JsonWebKeySetEndpoint = BuildRealmEndpoint(realmOptions, "/.well-known/jwks");
+
+                        return default;
+                    });
+                });
             });
 
         services.AddAuthorization();
+        services.AddScoped<AuthPageRenderer>();
         services.AddScoped<AuthIntegrationEventPublisher>();
         services.AddScoped<ExternalLoginAccountManager>();
 
         return services;
     }
 
+    private static Uri BuildRealmEndpoint(AuthOptions realmOptions, string path)
+    {
+        return new Uri($"{realmOptions.Issuer}{path}");
+    }
+
     private static void AddConfiguredExternalAuthenticationProviders(
         this IServiceCollection services,
-        AuthOptions authOptions)
+        AuthServerOptions authOptions)
     {
         var authentication = services.AddAuthentication();
 
-        foreach (var provider in authOptions.ExternalProviders.EnabledProviders)
+        foreach (var provider in authOptions.Realms.SelectMany(realm => realm.ExternalProviders.EnabledProviders))
         {
             if (!provider.IsConfigured)
             {
@@ -140,15 +183,16 @@ internal static class AuthServiceCollectionExtensions
             }
         }
 
-        var google = authOptions.ExternalProviders.Google;
-
-        if (google.Enabled)
+        foreach (var google in authOptions.Realms
+            .Select(realm => realm.ExternalProviders.Google)
+            .Where(provider => provider.Enabled))
         {
             authentication.AddGoogle(google.AuthenticationScheme, google.DisplayName, options =>
             {
                 options.SignInScheme = IdentityConstants.ExternalScheme;
                 options.ClientId = google.ClientId;
                 options.ClientSecret = google.ClientSecret;
+                options.CallbackPath = google.CallbackPath;
                 options.SaveTokens = false;
 
                 if (!options.Scope.Contains("email"))
@@ -160,15 +204,15 @@ internal static class AuthServiceCollectionExtensions
             });
         }
 
-        var apple = authOptions.ExternalProviders.Apple;
-
-        if (apple.Enabled)
+        foreach (var apple in authOptions.Realms
+            .Select(realm => realm.ExternalProviders.Apple)
+            .Where(provider => provider.Enabled))
         {
             authentication.AddOpenIdConnect(apple.AuthenticationScheme, apple.DisplayName, options =>
             {
                 options.SignInScheme = IdentityConstants.ExternalScheme;
                 options.Authority = "https://appleid.apple.com";
-                options.CallbackPath = "/signin-apple";
+                options.CallbackPath = apple.CallbackPath;
                 options.ClientId = apple.ClientId;
                 options.ClientSecret = AppleClientSecretFactory.Create(apple);
                 options.ResponseType = OpenIdConnectResponseType.Code;

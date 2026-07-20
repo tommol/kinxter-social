@@ -9,22 +9,26 @@ namespace Kinxter.Auth;
 internal sealed class ExternalLoginAccountManager
 {
     private readonly UserManager<AuthUser> userManager;
+    private readonly AuthDbContext dbContext;
     private readonly AuthIntegrationEventPublisher eventPublisher;
     private readonly AuthOptions options;
     private readonly IClock clock;
 
     public ExternalLoginAccountManager(
         UserManager<AuthUser> userManager,
+        AuthDbContext dbContext,
         AuthIntegrationEventPublisher eventPublisher,
         AuthOptions options,
         IClock clock)
     {
         ArgumentNullException.ThrowIfNull(userManager);
+        ArgumentNullException.ThrowIfNull(dbContext);
         ArgumentNullException.ThrowIfNull(eventPublisher);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(clock);
 
         this.userManager = userManager;
+        this.dbContext = dbContext;
         this.eventPublisher = eventPublisher;
         this.options = options;
         this.clock = clock;
@@ -52,7 +56,11 @@ internal sealed class ExternalLoginAccountManager
             return ExternalLoginAccountResult.Failure(ExternalLoginAccountStatus.EmailNotVerified);
         }
 
-        var existingUserWithEmail = await this.userManager.FindByEmailAsync(email);
+        var existingUserWithEmail = await this.userManager.FindByEmailInRealmAsync(
+            this.dbContext,
+            this.options,
+            email,
+            cancellationToken);
 
         if (existingUserWithEmail is not null)
         {

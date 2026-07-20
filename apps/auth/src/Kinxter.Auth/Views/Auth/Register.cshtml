@@ -1,0 +1,37 @@
+@model Kinxter.Auth.Rendering.Models.AuthRegisterPageViewModel
+@{
+    Layout = "/Views/Auth/_Layout.cshtml";
+    ViewData["Title"] = Model.SignupEnabled ? "Create account" : "Signup disabled";
+}
+@if (!Model.SignupEnabled)
+{
+  <h1>Signup disabled</h1>
+  <p>This realm does not allow self-service registration.</p>
+}
+else
+{
+  <h1>Create account</h1>
+  @if (!string.IsNullOrWhiteSpace(Model.Error))
+  {
+    <p class="error">@Model.Error</p>
+  }
+  @if (Model.ExternalProviders.Count > 0)
+  {
+    <div class="external-logins">
+    @foreach (var provider in Model.ExternalProviders)
+    {
+      <form method="post" action="@provider.ActionPath">
+        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
+        <button type="submit">Continue with @provider.DisplayName</button>
+      </form>
+    }
+    </div>
+  }
+  <form method="post">
+    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
+    <label>Email <input type="email" name="email" autocomplete="email" required></label>
+    <label>Password <input type="password" name="password" autocomplete="new-password" required></label>
+    <button type="submit">Create account</button>
+  </form>
+  <p><a href="@Model.LoginPath?returnUrl=@Model.EscapedReturnUrl">Sign in</a></p>
+}

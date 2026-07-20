@@ -15,8 +15,6 @@ namespace Kinxter.Api;
 
 internal static class OnboardingEndpoints
 {
-    private const string PublicIdentityProvider = "kinxter-auth:public";
-
     public static IEndpointRouteBuilder MapOnboardingEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("")
@@ -41,15 +39,17 @@ internal static class OnboardingEndpoints
 
     private static async Task<IResult> GetCurrentUserAsync(
         ClaimsPrincipal principal,
+        ApiAuthenticationOptions authOptions,
         AccountsDbContext accountsDbContext,
         ProfilesDbContext profilesDbContext,
         CancellationToken cancellationToken)
     {
         var identity = GetIdentity(principal);
+        var identityProvider = authOptions.PublicIdentityProvider;
         var account = await accountsDbContext.Accounts
             .AsNoTracking()
             .SingleOrDefaultAsync(current =>
-                current.IdentityProvider == PublicIdentityProvider &&
+                current.IdentityProvider == identityProvider &&
                 current.IdentitySubject == identity.Subject,
                 cancellationToken);
 
@@ -80,6 +80,7 @@ internal static class OnboardingEndpoints
         ProfilesDbContext profilesDbContext,
         IOutboxWriter<AccountsOutbox> outboxWriter,
         IClock clock,
+        ApiAuthenticationOptions authOptions,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Handle) || string.IsNullOrWhiteSpace(request.DisplayName))
@@ -92,13 +93,14 @@ internal static class OnboardingEndpoints
         }
 
         var identity = GetIdentity(principal);
+        var identityProvider = authOptions.PublicIdentityProvider;
         var normalizedHandle = request.Handle.Trim().ToLowerInvariant();
         var existingProfileWithHandle = await profilesDbContext.Profiles
             .AsNoTracking()
             .SingleOrDefaultAsync(profile => profile.NormalizedHandle == normalizedHandle, cancellationToken);
         var existingAccount = await accountsDbContext.Accounts
             .SingleOrDefaultAsync(current =>
-                current.IdentityProvider == PublicIdentityProvider &&
+                current.IdentityProvider == identityProvider &&
                 current.IdentitySubject == identity.Subject,
                 cancellationToken);
 
@@ -134,7 +136,7 @@ internal static class OnboardingEndpoints
         var account = Account.Create(
             Guid.CreateVersion7(now),
             identity.Email,
-            PublicIdentityProvider,
+            identityProvider,
             identity.Subject,
             identity.EmailVerified,
             now);

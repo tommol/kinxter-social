@@ -11,6 +11,7 @@ internal static partial class AccountEndpoints
         SignInManager<AuthUser> signInManager,
         AuthIntegrationEventPublisher eventPublisher,
         AuthOptions options,
+        AuthPageRenderer renderer,
         CancellationToken cancellationToken)
     {
         if (!options.SignupEnabled)
@@ -25,7 +26,7 @@ internal static partial class AccountEndpoints
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
-            return Results.Content(AuthHtml.Register(options, returnUrl, "Email and password are required."), "text/html");
+            return await renderer.RegisterAsync(context, options, returnUrl, "Email and password are required.");
         }
 
         var user = new AuthUser
@@ -42,7 +43,7 @@ internal static partial class AccountEndpoints
 
         if (!result.Succeeded)
         {
-            return Results.Content(AuthHtml.Register(options, returnUrl, FormatIdentityErrors(result)), "text/html");
+            return await renderer.RegisterAsync(context, options, returnUrl, FormatIdentityErrors(result));
         }
 
         await eventPublisher.PublishUserRegisteredAsync(user, cancellationToken);

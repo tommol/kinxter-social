@@ -301,9 +301,14 @@ namespace Kinxter.Auth.Infrastructure.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_NormalizedUserName",
+                table: "AspNetUsers",
+                column: "NormalizedUserName");
+
+            migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 table: "AspNetUsers",
-                column: "NormalizedUserName",
+                columns: new[] { "Realm", "NormalizedUserName" },
                 unique: true);
 
             migrationBuilder.CreateIndex(

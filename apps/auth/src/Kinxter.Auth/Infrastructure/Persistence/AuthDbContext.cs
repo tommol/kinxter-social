@@ -10,28 +10,13 @@ public sealed class AuthDbContext : IdentityDbContext<AuthUser, IdentityRole<Gui
     {
     }
 
+    public DbSet<AuthRealm> AuthRealms { get; set; } = null!;
+
+    public DbSet<AuthClient> AuthClients { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
-
-        builder.Entity<AuthUser>(user =>
-        {
-            user.Property(current => current.Realm)
-                .IsRequired()
-                .HasMaxLength(64);
-
-            user.Property(current => current.CreatedAt)
-                .IsRequired();
-
-            user.Property(current => current.DisabledAt);
-            user.Property(current => current.DeletedAt);
-
-            user.HasIndex(current => new
-                {
-                    current.Realm,
-                    current.NormalizedEmail
-                })
-                .IsUnique();
-        });
+        builder.ApplyConfigurationsFromAssembly(typeof(AuthDbContext).Assembly);
     }
 }

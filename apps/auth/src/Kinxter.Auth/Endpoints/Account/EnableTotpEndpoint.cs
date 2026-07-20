@@ -8,6 +8,7 @@ internal static partial class AccountEndpoints
     private static async Task<IResult> EnableTotpAsync(
         HttpContext context,
         UserManager<AuthUser> userManager,
+        AuthPageRenderer renderer,
         CancellationToken cancellationToken)
     {
         var user = await userManager.GetUserAsync(context.User);
@@ -29,7 +30,7 @@ internal static partial class AccountEndpoints
         {
             var key = await userManager.GetAuthenticatorKeyAsync(user);
 
-            return Results.Content(AuthHtml.TotpSetup(key, returnUrl, "Invalid authenticator code."), "text/html");
+            return await renderer.TotpSetupAsync(context, key, returnUrl, "Invalid authenticator code.");
         }
 
         await userManager.SetTwoFactorEnabledAsync(user, enabled: true);

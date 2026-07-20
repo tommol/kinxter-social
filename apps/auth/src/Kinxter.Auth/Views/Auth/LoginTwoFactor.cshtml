@@ -1,0 +1,15 @@
+@model Kinxter.Auth.Rendering.Models.AuthLoginTwoFactorPageViewModel
+@{
+    Layout = "/Views/Auth/_Layout.cshtml";
+    ViewData["Title"] = "Two-factor authentication";
+}
+<h1>Two-factor authentication</h1>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+  <p class="error">@Model.Error</p>
+}
+<form method="post">
+  <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
+  <label>Authenticator code <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+  <button type="submit">Verify</button>
+</form>

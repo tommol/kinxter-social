@@ -12,6 +12,7 @@ internal static partial class AccountEndpoints
         SignInManager<AuthUser> signInManager,
         ExternalLoginAccountManager externalLogins,
         AuthOptions options,
+        AuthPageRenderer renderer,
         string? returnUrl,
         bool? link,
         CancellationToken cancellationToken)
@@ -32,7 +33,12 @@ internal static partial class AccountEndpoints
 
         if (login is null)
         {
-            return LoginError(options, normalizedReturnUrl, "External login could not be completed.");
+            return await LoginErrorAsync(
+                context,
+                renderer,
+                options,
+                normalizedReturnUrl,
+                "External login could not be completed.");
         }
 
         try
@@ -41,7 +47,12 @@ internal static partial class AccountEndpoints
 
             if (externalProvider is null)
             {
-                return LoginError(options, normalizedReturnUrl, "External login provider is not available.");
+                return await LoginErrorAsync(
+                    context,
+                    renderer,
+                    options,
+                    normalizedReturnUrl,
+                    "External login provider is not available.");
             }
 
             return isLinkFlow
@@ -56,6 +67,7 @@ internal static partial class AccountEndpoints
                     externalLogins,
                     signInManager,
                     options,
+                    renderer,
                     context,
                     normalizedReturnUrl,
                     cancellationToken);
@@ -71,45 +83,55 @@ internal static partial class AccountEndpoints
         ExternalLoginAccountManager externalLogins,
         SignInManager<AuthUser> signInManager,
         AuthOptions options,
+        AuthPageRenderer renderer,
         HttpContext context,
         string returnUrl,
         CancellationToken cancellationToken)
     {
         var accountResult = await externalLogins.ResolveForSignInAsync(login, cancellationToken);
 
-        return accountResult.Status switch
+        return await (accountResult.Status switch
         {
-            ExternalLoginAccountStatus.ExistingLinkedUser => await SignInExistingExternalUserAsync(
+            ExternalLoginAccountStatus.ExistingLinkedUser => SignInExistingExternalUserAsync(
+                accountResult.User!,
+                login,
+                signInManager,
+                options,
+                renderer,
+                context,
+                returnUrl),
+            ExternalLoginAccountStatus.CreatedUser => SignInNewExternalUserAsync(
                 accountResult.User!,
                 login,
                 signInManager,
                 options,
                 context,
                 returnUrl),
-            ExternalLoginAccountStatus.CreatedUser => await SignInNewExternalUserAsync(
-                accountResult.User!,
-                login,
-                signInManager,
-                options,
+            ExternalLoginAccountStatus.UserUnavailable => LoginErrorAsync(
                 context,
-                returnUrl),
-            ExternalLoginAccountStatus.UserUnavailable => LoginError(
+                renderer,
                 options,
                 returnUrl,
                 "This account cannot sign in."),
-            ExternalLoginAccountStatus.EmailNotVerified => LoginError(
+            ExternalLoginAccountStatus.EmailNotVerified => LoginErrorAsync(
+                context,
+                renderer,
                 options,
                 returnUrl,
                 "External provider did not return a verified email address."),
-            ExternalLoginAccountStatus.EmailAlreadyExists => LoginError(
+            ExternalLoginAccountStatus.EmailAlreadyExists => LoginErrorAsync(
+                context,
+                renderer,
                 options,
                 returnUrl,
                 "An account with this email already exists. Sign in with email and link this provider from your account."),
-            _ => LoginError(
+            _ => LoginErrorAsync(
+                context,
+                renderer,
                 options,
                 returnUrl,
                 accountResult.Error ?? "External login failed.")
-        };
+        });
     }
 
     private static async Task<IResult> CompleteExternalLinkAsync(
@@ -143,6 +165,7 @@ internal static partial class AccountEndpoints
         ExternalLoginInfo login,
         SignInManager<AuthUser> signInManager,
         AuthOptions options,
+        AuthPageRenderer renderer,
         HttpContext context,
         string returnUrl)
     {
@@ -160,7 +183,7 @@ internal static partial class AccountEndpoints
 
         if (!signInResult.Succeeded)
         {
-            return LoginError(options, returnUrl, "External login failed.");
+            return await LoginErrorAsync(context, renderer, options, returnUrl, "External login failed.");
         }
 
         return options.RequiresMfa && !user.TwoFactorEnabled
@@ -185,8 +208,13 @@ internal static partial class AccountEndpoints
             : Results.Redirect(returnUrl);
     }
 
-    private static IResult LoginError(AuthOptions options, string returnUrl, string error)
+    private static Task<IResult> LoginErrorAsync(
+        HttpContext context,
+        AuthPageRenderer renderer,
+        AuthOptions options,
+        string returnUrl,
+        string error)
     {
-        return Results.Content(AuthHtml.Login(options, returnUrl, error), "text/html");
+        return renderer.LoginAsync(context, options, returnUrl, error);
     }
 }

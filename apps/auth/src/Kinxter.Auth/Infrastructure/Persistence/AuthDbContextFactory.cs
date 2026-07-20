@@ -8,7 +8,7 @@ public sealed class AuthDbContextFactory : IDesignTimeDbContextFactory<AuthDbCon
     public AuthDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<AuthDbContext>();
-        var schema = Environment.GetEnvironmentVariable("Auth__DbSchema") ?? "auth_public";
+        var schema = Environment.GetEnvironmentVariable("Auth__DbSchema") ?? "auth";
 
         optionsBuilder.UseNpgsql(AuthPostgresConnectionString.Build(GetConnectionString(), schema));
         optionsBuilder.UseOpenIddict();

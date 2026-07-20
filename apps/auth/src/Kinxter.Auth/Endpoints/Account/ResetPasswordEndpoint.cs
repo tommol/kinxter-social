@@ -7,9 +7,16 @@ internal static partial class AccountEndpoints
 {
     private static async Task<IResult> ResetPasswordAsync(
         ResetPasswordRequest request,
-        UserManager<AuthUser> userManager)
+        AuthDbContext dbContext,
+        UserManager<AuthUser> userManager,
+        AuthOptions options,
+        CancellationToken cancellationToken)
     {
-        var user = await userManager.FindByEmailAsync(request.Email.Trim());
+        var user = await userManager.FindByEmailInRealmAsync(
+            dbContext,
+            options,
+            request.Email,
+            cancellationToken);
 
         if (user is null)
         {

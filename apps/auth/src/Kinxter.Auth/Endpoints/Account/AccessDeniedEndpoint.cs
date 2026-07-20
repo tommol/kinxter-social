@@ -2,8 +2,10 @@ namespace Kinxter.Auth;
 
 internal static partial class AccountEndpoints
 {
-    private static IResult GetAccessDeniedAsync()
+    private static Task<IResult> GetAccessDeniedAsync(
+        HttpContext context,
+        AuthPageRenderer renderer)
     {
-        return Results.Content(AuthHtml.AccessDenied(), "text/html");
+        return renderer.AccessDeniedAsync(context);
     }
 }

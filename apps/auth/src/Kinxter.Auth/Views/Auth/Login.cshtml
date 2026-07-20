@@ -1,0 +1,32 @@
+@model Kinxter.Auth.Rendering.Models.AuthLoginPageViewModel
+@{
+    Layout = "/Views/Auth/_Layout.cshtml";
+    ViewData["Title"] = "Sign in";
+}
+<h1>Sign in</h1>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+  <p class="error">@Model.Error</p>
+}
+@if (Model.ExternalProviders.Count > 0)
+{
+  <div class="external-logins">
+  @foreach (var provider in Model.ExternalProviders)
+  {
+    <form method="post" action="@provider.ActionPath">
+      <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
+      <button type="submit">Continue with @provider.DisplayName</button>
+    </form>
+  }
+  </div>
+}
+<form method="post">
+  <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
+  <label>Email <input type="email" name="email" autocomplete="email" required></label>
+  <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+  <button type="submit">Sign in</button>
+</form>
+@if (Model.SignupEnabled)
+{
+  <p><a href="@Model.RegisterPath?returnUrl=@Model.EscapedReturnUrl">Create account</a></p>
+}

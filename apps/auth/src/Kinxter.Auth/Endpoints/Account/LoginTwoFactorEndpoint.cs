@@ -8,6 +8,7 @@ internal static partial class AccountEndpoints
     private static async Task<IResult> LoginTwoFactorAsync(
         HttpContext context,
         SignInManager<AuthUser> signInManager,
+        AuthPageRenderer renderer,
         CancellationToken cancellationToken)
     {
         var form = await context.Request.ReadFormAsync(cancellationToken);
@@ -21,6 +22,6 @@ internal static partial class AccountEndpoints
 
         return result.Succeeded
             ? Results.Redirect(returnUrl)
-            : Results.Content(AuthHtml.LoginTwoFactor(returnUrl, "Invalid authenticator code."), "text/html");
+            : await renderer.LoginTwoFactorAsync(context, returnUrl, "Invalid authenticator code.");
     }
 }

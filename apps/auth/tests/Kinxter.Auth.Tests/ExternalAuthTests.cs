@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Kinxter.Auth.Infrastructure.Persistence;
+using Kinxter.Auth.Rendering.Models;
 using Kinxter.IntegrationEvents.Identity;
 using Kinxter.Shared.Abstractions.Events;
 using Kinxter.Shared.Abstractions.Time;
@@ -21,6 +22,7 @@ public sealed class ExternalAuthTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["Auth:Realm"] = "customers",
                 ["Auth:ExternalProviders:Google:Enabled"] = "true",
                 ["Auth:ExternalProviders:Google:ClientId"] = "google-client",
                 ["Auth:ExternalProviders:Google:ClientSecret"] = "google-secret",
@@ -43,16 +45,73 @@ public sealed class ExternalAuthTests
     }
 
     [Fact]
-    public void Login_does_not_render_external_buttons_when_providers_are_disabled()
+    public void AuthServerOptions_reads_multiple_realms()
     {
-        var html = AuthHtml.Login(new AuthOptions(), "/connect/authorize");
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Auth:DbSchema"] = "auth",
+                ["Auth:Realms:0:Realm"] = "public",
+                ["Auth:Realms:0:Issuer"] = "http://localhost:8081/realms/public",
+                ["Auth:Realms:0:AllowedOrigins:0"] = "http://localhost:3000",
+                ["Auth:Realms:1:Realm"] = "backoffice",
+                ["Auth:Realms:1:Issuer"] = "http://localhost:8081/realms/backoffice",
+                ["Auth:Realms:1:MfaPolicy"] = "Required",
+                ["Auth:Realms:1:SignupEnabled"] = "false",
+                ["Auth:Realms:1:AllowedOrigins:0"] = "http://localhost:3001"
+            })
+            .Build();
 
-        Assert.DoesNotContain("Continue with Google", html);
-        Assert.DoesNotContain("Continue with Apple", html);
+        var options = AuthServerOptions.FromConfiguration(configuration);
+
+        Assert.Equal("auth", options.DbSchema);
+        Assert.Collection(
+            options.Realms,
+            publicRealm =>
+            {
+                Assert.Equal("public", publicRealm.Realm);
+                Assert.Equal("/realms/public", publicRealm.PathBase);
+                Assert.True(publicRealm.SignupEnabled);
+            },
+            backofficeRealm =>
+            {
+                Assert.Equal("backoffice", backofficeRealm.Realm);
+                Assert.Equal("/realms/backoffice", backofficeRealm.PathBase);
+                Assert.True(backofficeRealm.RequiresMfa);
+                Assert.False(backofficeRealm.SignupEnabled);
+            });
+        Assert.Contains("http://localhost:3000", options.AllowedOrigins);
+        Assert.Contains("http://localhost:3001", options.AllowedOrigins);
     }
 
     [Fact]
-    public void Login_renders_configured_external_buttons_with_path_base()
+    public void AuthServerOptions_reads_named_realm_section_key()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Auth:Realms:customers:Issuer"] = "http://localhost:8081/realms/customers"
+            })
+            .Build();
+
+        var options = AuthServerOptions.FromConfiguration(configuration);
+        var realm = Assert.Single(options.Realms);
+
+        Assert.Equal("customers", realm.Realm);
+        Assert.Equal("/realms/customers", realm.PathBase);
+        Assert.True(realm.SignupEnabled);
+    }
+
+    [Fact]
+    public void Login_model_omits_external_providers_when_they_are_disabled()
+    {
+        var model = new AuthLoginPageViewModel(new AuthOptions(), "/connect/authorize");
+
+        Assert.Empty(model.ExternalProviders);
+    }
+
+    [Fact]
+    public void Login_model_includes_configured_external_providers_with_path_base()
     {
         var options = new AuthOptions
         {
@@ -70,11 +129,11 @@ public sealed class ExternalAuthTests
             }
         };
 
-        var html = AuthHtml.Login(options, "/connect/authorize");
+        var model = new AuthLoginPageViewModel(options, "/connect/authorize");
 
-        Assert.Contains("Continue with Google", html);
-        Assert.Contains("action=\"/realms/public/account/external-login/google\"", html);
-        Assert.DoesNotContain("Continue with Apple", html);
+        var provider = Assert.Single(model.ExternalProviders);
+        Assert.Equal("Google", provider.DisplayName);
+        Assert.Equal("/realms/public/account/external-login/google", provider.ActionPath);
     }
 
     [Fact]
@@ -194,7 +253,7 @@ public sealed class ExternalAuthTests
         var user = new AuthUser
         {
             Id = Guid.CreateVersion7(),
-            Realm = AuthRealms.Public,
+            Realm = "public",
             UserName = "user@example.com",
             Email = "user@example.com",
             EmailConfirmed = true
@@ -224,7 +283,7 @@ public sealed class ExternalAuthTests
         var services = new ServiceCollection();
         var authOptions = new AuthOptions
         {
-            Realm = AuthRealms.Public
+            Realm = "public"
         };
 
         services.AddLogging();
@@ -263,7 +322,7 @@ public sealed class ExternalAuthTests
         var user = new AuthUser
         {
             Id = Guid.CreateVersion7(),
-            Realm = AuthRealms.Public,
+            Realm = "public",
             UserName = email,
             Email = email,
             EmailConfirmed = true,

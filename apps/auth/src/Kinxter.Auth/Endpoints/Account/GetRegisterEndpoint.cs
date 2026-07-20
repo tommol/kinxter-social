@@ -2,8 +2,12 @@ namespace Kinxter.Auth;
 
 internal static partial class AccountEndpoints
 {
-    private static IResult GetRegisterAsync(string? returnUrl, AuthOptions options)
+    private static Task<IResult> GetRegisterAsync(
+        string? returnUrl,
+        AuthOptions options,
+        HttpContext context,
+        AuthPageRenderer renderer)
     {
-        return Results.Content(AuthHtml.Register(options, returnUrl), "text/html");
+        return renderer.RegisterAsync(context, options, returnUrl);
     }
 }

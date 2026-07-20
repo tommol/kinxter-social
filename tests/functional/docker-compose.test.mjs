@@ -28,8 +28,9 @@ before(
     const apiPort = process.env.FUNCTIONAL_API_HTTP_PORT ?? "18080";
     const webPort = process.env.FUNCTIONAL_WEB_HTTP_PORT ?? "13000";
     const adminPort = process.env.FUNCTIONAL_ADMIN_HTTP_PORT ?? "13001";
-    const authPublicPort = process.env.FUNCTIONAL_AUTH_PUBLIC_HTTP_PORT ?? "18081";
-    const authBackofficePort = process.env.FUNCTIONAL_AUTH_BACKOFFICE_HTTP_PORT ?? "18082";
+    const authPort = process.env.FUNCTIONAL_AUTH_HTTP_PORT ?? "18081";
+    const authPublicRealm = process.env.FUNCTIONAL_AUTH_PUBLIC_REALM ?? "public";
+    const authBackofficeRealm = process.env.FUNCTIONAL_AUTH_BACKOFFICE_REALM ?? "backoffice";
     const postgresPort = process.env.FUNCTIONAL_POSTGRES_PORT ?? "25432";
     const natsClientPort = process.env.FUNCTIONAL_NATS_CLIENT_PORT ?? "14222";
     const natsMonitorPort = process.env.FUNCTIONAL_NATS_MONITOR_PORT ?? "18222";
@@ -37,14 +38,17 @@ before(
     apiBaseUrl = `http://localhost:${apiPort}`;
     webBaseUrl = `http://localhost:${webPort}`;
     adminBaseUrl = `http://localhost:${adminPort}`;
-    authPublicBaseUrl = `http://localhost:${authPublicPort}/realms/public`;
-    authBackofficeBaseUrl = `http://localhost:${authBackofficePort}/realms/backoffice`;
+    authPublicBaseUrl = `http://localhost:${authPort}/realms/${authPublicRealm}`;
+    authBackofficeBaseUrl = `http://localhost:${authPort}/realms/${authBackofficeRealm}`;
     composeEnvironment = {
       API_HTTP_PORT: String(apiPort),
       WEB_HTTP_PORT: String(webPort),
       ADMIN_HTTP_PORT: String(adminPort),
-      AUTH_PUBLIC_HTTP_PORT: String(authPublicPort),
-      AUTH_BACKOFFICE_HTTP_PORT: String(authBackofficePort),
+      AUTH_HTTP_PORT: String(authPort),
+      AUTH_PUBLIC_REALM: authPublicRealm,
+      AUTH_BACKOFFICE_REALM: authBackofficeRealm,
+      AUTH_PUBLIC_PATH_BASE: `/realms/${authPublicRealm}`,
+      AUTH_BACKOFFICE_PATH_BASE: `/realms/${authBackofficeRealm}`,
       AUTH_PUBLIC_ISSUER: authPublicBaseUrl,
       AUTH_BACKOFFICE_ISSUER: authBackofficeBaseUrl,
       POSTGRES_PORT: String(postgresPort),
@@ -59,11 +63,11 @@ before(
     await runDockerCompose(["up", "--build", "--detach"]);
     await waitForJson(`${authPublicBaseUrl}/health`, {
       timeoutMs: 120_000,
-      validate: (payload) => payload?.status === "ok" && payload?.realm === "public",
+      validate: (payload) => payload?.status === "ok" && payload?.realm === authPublicRealm,
     });
     await waitForJson(`${authBackofficeBaseUrl}/health`, {
       timeoutMs: 120_000,
-      validate: (payload) => payload?.status === "ok" && payload?.realm === "backoffice",
+      validate: (payload) => payload?.status === "ok" && payload?.realm === authBackofficeRealm,
     });
     await waitForJson(`${apiBaseUrl}/health`, {
       timeoutMs: 120_000,
