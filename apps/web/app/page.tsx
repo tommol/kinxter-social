@@ -47,6 +47,7 @@ export default function Home() {
           <p className="summary">
             Minimal Next.js client prepared for the monorepo container setup.
           </p>
+          <a href="/api/auth/login">Sign in with Kinxter.Auth</a>
         </div>
 
         <div className="statusPanel">

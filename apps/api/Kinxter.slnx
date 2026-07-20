@@ -7,6 +7,7 @@
     <Project Path="src/modules/Kinxter.Profiles/Kinxter.Profiles.csproj" />
   </Folder>
   <Folder Name="/src/shared/">
+    <Project Path="src/shared/Kinxter.IntegrationEvents/Kinxter.IntegrationEvents.csproj" />
     <Project Path="src/shared/Kinxter.Shared.Abstractions/Kinxter.Shared.Abstractions.csproj" />
     <Project Path="src/shared/Kinxter.Shared.Infrastructure/Kinxter.Shared.Infrastructure.csproj" />
   </Folder>

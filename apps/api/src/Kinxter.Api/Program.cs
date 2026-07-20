@@ -1,5 +1,6 @@
 using Kinxter.Accounts;
 using Kinxter.Api;
+using Kinxter.Api.Authentication;
 using Kinxter.Api.Contracts.Dtos;
 using Kinxter.Profiles;
 using Kinxter.Shared.Infrastructure.DependencyInjection;
@@ -14,6 +15,7 @@ var allowedOrigins = builder.Configuration
 builder.Services.AddSharedInfrastructure(builder.Configuration);
 builder.Services.AddAccountsModule(builder.Configuration);
 builder.Services.AddProfilesModule(builder.Configuration);
+builder.Services.AddKinxterApiAuthentication(builder.Configuration);
 builder.Services.AddOpenApi("v1");
 
 builder.Services.AddCors(options =>
@@ -30,6 +32,8 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options =>

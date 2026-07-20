@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Kinxter.Auth/Kinxter.Auth.csproj" />
+  </Folder>
+</Solution>

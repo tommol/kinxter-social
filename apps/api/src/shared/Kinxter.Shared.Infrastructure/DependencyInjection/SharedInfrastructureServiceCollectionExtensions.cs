@@ -75,6 +75,10 @@ public static class SharedInfrastructureServiceCollectionExtensions
         services.AddSingleton<NatsJetStreamContextProvider>();
         services.AddSingleton<NatsJetStreamManager>();
         services.AddScoped<IModuleEventPublisher, NatsModuleEventPublisher>();
-        services.AddHostedService<NatsModuleEventConsumerBackgroundService>();
+
+        if (options.ConsumerEnabled)
+        {
+            services.AddHostedService<NatsModuleEventConsumerBackgroundService>();
+        }
     }
 }

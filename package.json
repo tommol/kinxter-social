@@ -4,8 +4,13 @@
   "description": "Kinxter Social monorepo.",
   "private": true,
   "scripts": {
+    "auth:build": "dotnet build apps/auth/Kinxter.Auth.slnx",
+    "auth:run": "dotnet run --project apps/auth/src/Kinxter.Auth/Kinxter.Auth.csproj",
     "api:build": "dotnet build apps/api/Kinxter.slnx",
     "api:run": "dotnet run --project apps/api/src/Kinxter.Api/Kinxter.Api.csproj",
+    "admin:dev": "pnpm --filter @kinxter/admin dev",
+    "admin:build": "pnpm --filter @kinxter/admin build",
+    "admin:start": "pnpm --filter @kinxter/admin start",
     "web:dev": "pnpm --filter @kinxter/web dev",
     "web:build": "pnpm --filter @kinxter/web build",
     "web:start": "pnpm --filter @kinxter/web start",

@@ -17,6 +17,9 @@ const composeCandidates = [
 
 let apiBaseUrl;
 let webBaseUrl;
+let adminBaseUrl;
+let authPublicBaseUrl;
+let authBackofficeBaseUrl;
 let composeEnvironment;
 let composeInvocation;
 
@@ -24,28 +27,50 @@ before(
   async () => {
     const apiPort = process.env.FUNCTIONAL_API_HTTP_PORT ?? "18080";
     const webPort = process.env.FUNCTIONAL_WEB_HTTP_PORT ?? "13000";
+    const adminPort = process.env.FUNCTIONAL_ADMIN_HTTP_PORT ?? "13001";
+    const authPublicPort = process.env.FUNCTIONAL_AUTH_PUBLIC_HTTP_PORT ?? "18081";
+    const authBackofficePort = process.env.FUNCTIONAL_AUTH_BACKOFFICE_HTTP_PORT ?? "18082";
     const postgresPort = process.env.FUNCTIONAL_POSTGRES_PORT ?? "25432";
     const natsClientPort = process.env.FUNCTIONAL_NATS_CLIENT_PORT ?? "14222";
     const natsMonitorPort = process.env.FUNCTIONAL_NATS_MONITOR_PORT ?? "18222";
 
     apiBaseUrl = `http://localhost:${apiPort}`;
     webBaseUrl = `http://localhost:${webPort}`;
+    adminBaseUrl = `http://localhost:${adminPort}`;
+    authPublicBaseUrl = `http://localhost:${authPublicPort}/realms/public`;
+    authBackofficeBaseUrl = `http://localhost:${authBackofficePort}/realms/backoffice`;
     composeEnvironment = {
       API_HTTP_PORT: String(apiPort),
       WEB_HTTP_PORT: String(webPort),
+      ADMIN_HTTP_PORT: String(adminPort),
+      AUTH_PUBLIC_HTTP_PORT: String(authPublicPort),
+      AUTH_BACKOFFICE_HTTP_PORT: String(authBackofficePort),
+      AUTH_PUBLIC_ISSUER: authPublicBaseUrl,
+      AUTH_BACKOFFICE_ISSUER: authBackofficeBaseUrl,
       POSTGRES_PORT: String(postgresPort),
       NATS_CLIENT_PORT: String(natsClientPort),
       NATS_MONITOR_PORT: String(natsMonitorPort),
+      ADMIN_API_BASE_URL: "http://api:8080",
       NEXT_PUBLIC_API_BASE_URL: apiBaseUrl,
       WEB_PUBLIC_ORIGIN: webBaseUrl,
+      ADMIN_PUBLIC_ORIGIN: adminBaseUrl,
     };
 
     await runDockerCompose(["up", "--build", "--detach"]);
+    await waitForJson(`${authPublicBaseUrl}/health`, {
+      timeoutMs: 120_000,
+      validate: (payload) => payload?.status === "ok" && payload?.realm === "public",
+    });
+    await waitForJson(`${authBackofficeBaseUrl}/health`, {
+      timeoutMs: 120_000,
+      validate: (payload) => payload?.status === "ok" && payload?.realm === "backoffice",
+    });
     await waitForJson(`${apiBaseUrl}/health`, {
       timeoutMs: 120_000,
       validate: (payload) => payload?.status === "ok",
     });
     await waitForHttpOk(webBaseUrl, { timeoutMs: 120_000 });
+    await waitForHttpOk(adminBaseUrl, { timeoutMs: 120_000 });
   },
   { timeout: 300_000 },
 );
@@ -73,6 +98,23 @@ test("API health endpoint returns the expected service status", async () => {
   });
 });
 
+test("auth realms expose distinct OpenID Connect discovery documents", async () => {
+  const [publicResponse, backofficeResponse] = await Promise.all([
+    fetch(`${authPublicBaseUrl}/.well-known/openid-configuration`),
+    fetch(`${authBackofficeBaseUrl}/.well-known/openid-configuration`),
+  ]);
+  const [publicDocument, backofficeDocument] = await Promise.all([
+    publicResponse.json(),
+    backofficeResponse.json(),
+  ]);
+
+  assert.equal(publicResponse.status, 200);
+  assert.equal(backofficeResponse.status, 200);
+  assert.equal(publicDocument.issuer, authPublicBaseUrl);
+  assert.equal(backofficeDocument.issuer, authBackofficeBaseUrl);
+  assert.notEqual(publicDocument.issuer, backofficeDocument.issuer);
+});
+
 test("API exposes an OpenAPI document for REST endpoints", async () => {
   const response = await fetch(`${apiBaseUrl}/openapi/v1.json`);
   const document = await response.json();
@@ -80,7 +122,9 @@ test("API exposes an OpenAPI document for REST endpoints", async () => {
   assert.equal(response.status, 200);
   assert.match(document.openapi, /^3\./);
   assert.ok(document.paths["/health"]);
-  assert.ok(document.paths["/api/v1/accounts/register"]?.post);
+  assert.ok(document.paths["/api/v1/me"]?.get);
+  assert.ok(document.paths["/api/v1/onboarding/account"]?.post);
+  assert.ok(document.paths["/api/v1/monitoring/overview"]?.get);
 });
 
 test("API serves the Scalar reference UI", async () => {
@@ -99,6 +143,7 @@ test("web application serves the Kinxter workspace page", async () => {
   assert.equal(response.status, 200);
   assert.match(html, /Kinxter Web/);
   assert.match(html, /Web client workspace/);
+  assert.match(html, /Sign in with Kinxter.Auth/);
 });
 
 test("web container is built with the functional API base URL", async () => {
@@ -107,6 +152,24 @@ test("web container is built with the functional API base URL", async () => {
 
   assert.equal(response.status, 200);
   assert.match(html, new RegExp(escapeRegExp(`${apiBaseUrl}/health`)));
+});
+
+test("admin application serves the monitoring dashboard", async () => {
+  const response = await fetch(adminBaseUrl);
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(html, /Kinxter Admin/);
+  assert.match(html, /Monitoring/);
+});
+
+test("admin monitoring endpoint requires a backoffice session", async () => {
+  const response = await fetch(`${adminBaseUrl}/api/monitoring/health`);
+  const payload = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(payload.status, "down");
+  assert.match(payload.error, /HTTP 401/);
 });
 
 async function runDockerCompose(args, options = {}) {

@@ -1,4 +1,3 @@
-using Kinxter.Accounts.Api.RegisterAccount;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -11,8 +10,6 @@ public static class AccountsEndpoints
     {
         var group = app.MapGroup("/accounts")
             .WithTags("Accounts");
-
-        group.MapRegisterAccountEndpoint();
 
         return app;
     }

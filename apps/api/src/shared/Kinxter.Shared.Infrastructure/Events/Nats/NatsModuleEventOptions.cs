@@ -14,6 +14,8 @@ internal sealed class NatsModuleEventOptions
 
     public string ConsumerName { get; init; } = "kinxter-api";
 
+    public bool ConsumerEnabled { get; init; } = true;
+
     public int MaxAckPending { get; init; } = 50;
 
     public int MaxDeliver { get; init; } = 10;
@@ -34,6 +36,7 @@ internal sealed class NatsModuleEventOptions
             StreamName = GetString(configuration, "StreamName", "KINXTER_MODULE_EVENTS"),
             SubjectPrefix = GetSubjectPrefix(configuration, "SubjectPrefix", "kinxter.events"),
             ConsumerName = GetString(configuration, "ConsumerName", "kinxter-api"),
+            ConsumerEnabled = GetBool(configuration, "ConsumerEnabled", true),
             MaxAckPending = GetPositiveInt(configuration, "MaxAckPending", 50),
             MaxDeliver = GetPositiveInt(configuration, "MaxDeliver", 10),
             AckWait = TimeSpan.FromSeconds(GetPositiveInt(configuration, "AckWaitSeconds", 30)),
@@ -63,6 +66,13 @@ internal sealed class NatsModuleEventOptions
     private static int GetPositiveInt(IConfiguration configuration, string key, int fallback)
     {
         return int.TryParse(configuration[key], out var value) && value > 0
+            ? value
+            : fallback;
+    }
+
+    private static bool GetBool(IConfiguration configuration, string key, bool fallback)
+    {
+        return bool.TryParse(configuration[key], out var value)
             ? value
             : fallback;
     }

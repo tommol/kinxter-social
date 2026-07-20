@@ -29,6 +29,92 @@ services:
     volumes:
       - nats_data:/data
 
+  auth-public:
+    image: kinxter-auth:local
+    build:
+      context: ../..
+      dockerfile: deploy/containers/Kinxter.Auth.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-kinxter_social};Username=${POSTGRES_USER:-kinxter};Password=${POSTGRES_PASSWORD:-kinxter};GSS Encryption Mode=Disable"
+      Database__ApplyMigrationsOnStartup: "true"
+      ModuleEvents__Transport: Nats
+      ModuleEvents__Nats__Url: nats://nats:4222
+      ModuleEvents__Nats__ConsumerName: kinxter-auth-public
+      ModuleEvents__Nats__ConsumerEnabled: "false"
+      Auth__Realm: public
+      Auth__Issuer: ${AUTH_PUBLIC_ISSUER:-http://localhost:8081/realms/public}
+      Auth__PathBase: /realms/public
+      Auth__DbSchema: auth_public
+      Auth__CookieName: kinxter-auth-public
+      Auth__MfaPolicy: OptionalStepUp
+      Auth__SignupEnabled: "true"
+      Auth__EncryptionKey: ${AUTH_TOKEN_ENCRYPTION_KEY:-DRjd/GnduI3Efzen9V9BvbNUfc/VKgXltV7Kbk9sMkY=}
+      Auth__AllowedOrigins__0: ${WEB_PUBLIC_ORIGIN:-http://localhost:3000}
+      Auth__Clients__0__ClientId: kinxter-web
+      Auth__Clients__0__ClientSecret: ${KINXTER_WEB_CLIENT_SECRET:-kinxter-web-dev-secret}
+      Auth__Clients__0__DisplayName: Kinxter Web
+      Auth__Clients__0__RedirectUris__0: ${WEB_PUBLIC_ORIGIN:-http://localhost:3000}/api/auth/callback/kinxter
+      Auth__Clients__0__PostLogoutRedirectUris__0: ${WEB_PUBLIC_ORIGIN:-http://localhost:3000}
+      Auth__Clients__0__Scopes__0: openid
+      Auth__Clients__0__Scopes__1: profile
+      Auth__Clients__0__Scopes__2: email
+      Auth__Clients__0__Scopes__3: offline_access
+      Auth__Clients__0__Scopes__4: kinxter.api
+    ports:
+      - "${AUTH_PUBLIC_HTTP_PORT:-8081}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+
+  auth-backoffice:
+    image: kinxter-auth:local
+    build:
+      context: ../..
+      dockerfile: deploy/containers/Kinxter.Auth.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-kinxter_social};Username=${POSTGRES_USER:-kinxter};Password=${POSTGRES_PASSWORD:-kinxter};GSS Encryption Mode=Disable"
+      Database__ApplyMigrationsOnStartup: "true"
+      ModuleEvents__Transport: Nats
+      ModuleEvents__Nats__Url: nats://nats:4222
+      ModuleEvents__Nats__ConsumerName: kinxter-auth-backoffice
+      ModuleEvents__Nats__ConsumerEnabled: "false"
+      Auth__Realm: backoffice
+      Auth__Issuer: ${AUTH_BACKOFFICE_ISSUER:-http://localhost:8082/realms/backoffice}
+      Auth__PathBase: /realms/backoffice
+      Auth__DbSchema: auth_backoffice
+      Auth__CookieName: kinxter-auth-backoffice
+      Auth__MfaPolicy: Required
+      Auth__SignupEnabled: "false"
+      Auth__EncryptionKey: ${AUTH_TOKEN_ENCRYPTION_KEY:-DRjd/GnduI3Efzen9V9BvbNUfc/VKgXltV7Kbk9sMkY=}
+      Auth__AllowedOrigins__0: ${ADMIN_PUBLIC_ORIGIN:-http://localhost:3001}
+      Auth__Clients__0__ClientId: kinxter-admin
+      Auth__Clients__0__ClientSecret: ${KINXTER_ADMIN_CLIENT_SECRET:-kinxter-admin-dev-secret}
+      Auth__Clients__0__DisplayName: Kinxter Admin
+      Auth__Clients__0__RedirectUris__0: ${ADMIN_PUBLIC_ORIGIN:-http://localhost:3001}/api/auth/callback/kinxter
+      Auth__Clients__0__PostLogoutRedirectUris__0: ${ADMIN_PUBLIC_ORIGIN:-http://localhost:3001}
+      Auth__Clients__0__Scopes__0: openid
+      Auth__Clients__0__Scopes__1: profile
+      Auth__Clients__0__Scopes__2: email
+      Auth__Clients__0__Scopes__3: offline_access
+      Auth__Clients__0__Scopes__4: roles
+      Auth__Clients__0__Scopes__5: kinxter.admin
+      Auth__SeedAdmin__Enabled: ${BACKOFFICE_SEED_ADMIN_ENABLED:-false}
+      Auth__SeedAdmin__Email: ${BACKOFFICE_SEED_ADMIN_EMAIL:-admin@kinxter.local}
+      Auth__SeedAdmin__Password: ${BACKOFFICE_SEED_ADMIN_PASSWORD:-ChangeMe123!}
+    ports:
+      - "${AUTH_BACKOFFICE_HTTP_PORT:-8082}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+
   api:
     image: kinxter-api:local
     build:
@@ -39,7 +125,12 @@ services:
       ASPNETCORE_HTTP_PORTS: 8080
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-kinxter_social};Username=${POSTGRES_USER:-kinxter};Password=${POSTGRES_PASSWORD:-kinxter};GSS Encryption Mode=Disable"
       Cors__AllowedOrigins__0: ${WEB_PUBLIC_ORIGIN:-http://localhost:3000}
+      Cors__AllowedOrigins__1: ${ADMIN_PUBLIC_ORIGIN:-http://localhost:3001}
       Database__ApplyMigrationsOnStartup: "true"
+      Auth__Audience: kinxter-api
+      Auth__PublicIssuer: ${AUTH_PUBLIC_ISSUER:-http://localhost:8081/realms/public}
+      Auth__BackofficeIssuer: ${AUTH_BACKOFFICE_ISSUER:-http://localhost:8082/realms/backoffice}
+      Auth__EncryptionKey: ${AUTH_TOKEN_ENCRYPTION_KEY:-DRjd/GnduI3Efzen9V9BvbNUfc/VKgXltV7Kbk9sMkY=}
       ModuleEvents__Transport: Nats
       ModuleEvents__Nats__Url: nats://nats:4222
     ports:
@@ -48,6 +139,10 @@ services:
       postgres:
         condition: service_healthy
       nats:
+        condition: service_started
+      auth-public:
+        condition: service_started
+      auth-backoffice:
         condition: service_started
 
   web:
@@ -59,10 +154,36 @@ services:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
     environment:
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+      AUTH_ISSUER: ${AUTH_PUBLIC_ISSUER:-http://localhost:8081/realms/public}
+      AUTH_CLIENT_ID: kinxter-web
+      AUTH_CLIENT_SECRET: ${KINXTER_WEB_CLIENT_SECRET:-kinxter-web-dev-secret}
+      AUTH_SECRET: ${KINXTER_WEB_AUTH_SECRET:-kinxter-web-dev-auth-secret}
+      KINXTER_API_BASE_URL: ${KINXTER_API_BASE_URL:-http://api:8080}
     ports:
       - "${WEB_HTTP_PORT:-3000}:3000"
     depends_on:
       api:
+        condition: service_started
+      auth-public:
+        condition: service_started
+
+  admin:
+    image: kinxter-admin:local
+    build:
+      context: ../..
+      dockerfile: deploy/containers/Kinxter.Admin.Dockerfile
+    environment:
+      ADMIN_API_BASE_URL: ${ADMIN_API_BASE_URL:-http://api:8080}
+      AUTH_ISSUER: ${AUTH_BACKOFFICE_ISSUER:-http://localhost:8082/realms/backoffice}
+      AUTH_CLIENT_ID: kinxter-admin
+      AUTH_CLIENT_SECRET: ${KINXTER_ADMIN_CLIENT_SECRET:-kinxter-admin-dev-secret}
+      AUTH_SECRET: ${KINXTER_ADMIN_AUTH_SECRET:-kinxter-admin-dev-auth-secret}
+    ports:
+      - "${ADMIN_HTTP_PORT:-3001}:3001"
+    depends_on:
+      api:
+        condition: service_started
+      auth-backoffice:
         condition: service_started
 
 volumes:

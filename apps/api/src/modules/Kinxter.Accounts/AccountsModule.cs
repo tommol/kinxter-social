@@ -1,6 +1,9 @@
+using Kinxter.Accounts.Application.IdentityEvents;
 using Kinxter.Accounts.Application.RegisterAccount;
+using Kinxter.IntegrationEvents.Identity;
 using Kinxter.Accounts.Infrastructure.Outbox;
 using Kinxter.Accounts.Infrastructure.Persistence;
+using Kinxter.Shared.Abstractions.Events;
 using Kinxter.Shared.Abstractions.Application;
 using Kinxter.Shared.Abstractions.Outbox;
 using Microsoft.Extensions.Configuration;
@@ -40,6 +43,9 @@ public static class AccountsModule
     private static void AddApplicationServices(IServiceCollection services)
     {
         services.AddScoped<ICommandHandler<RegisterAccountCommand, RegisterAccountResult>, RegisterAccountHandler>();
+        services.AddScoped<IModuleEventHandler<IdentityEmailConfirmedV1>, IdentityEmailConfirmedHandler>();
+        services.AddScoped<IModuleEventHandler<IdentityUserDisabledV1>, IdentityUserDisabledHandler>();
+        services.AddScoped<IModuleEventHandler<IdentityUserDeletedV1>, IdentityUserDeletedHandler>();
         services.AddScoped<IOutboxWriter<AccountsOutbox>, AccountsOutboxWriter>();
         services.AddScoped<IOutboxStore, AccountsOutboxStore>();
     }

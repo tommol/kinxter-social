@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Kinxter.Shared.Abstractions/Kinxter.Shared.Abstractions.csproj" />
+    <ProjectReference Include="../Kinxter.IntegrationEvents/Kinxter.IntegrationEvents.csproj" />
   </ItemGroup>
 
 </Project>

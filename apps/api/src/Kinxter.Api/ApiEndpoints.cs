@@ -9,6 +9,8 @@ internal static class ApiEndpoints
         var group = app.MapGroup("/api/v1");
 
         group.MapAccountsEndpoints();
+        group.MapOnboardingEndpoints();
+        group.MapMonitoringEndpoints();
 
         return app;
     }
