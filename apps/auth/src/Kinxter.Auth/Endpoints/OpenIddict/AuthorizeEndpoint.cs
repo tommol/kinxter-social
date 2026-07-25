@@ -16,11 +16,27 @@ internal static partial class OpenIddictEndpoints
         UserManager<AuthUser> userManager,
         SignInManager<AuthUser> signInManager,
         IOpenIddictScopeManager scopeManager,
+        AuthDbContext dbContext,
         AuthOptions authOptions)
     {
         var request = context.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
         var result = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+
+        if (!await IsClientEnabledForRealmAsync(
+                dbContext,
+                request.ClientId,
+                authOptions,
+                context.RequestAborted))
+        {
+            return Results.Forbid(
+                authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.UnauthorizedClient,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client is not enabled for this realm."
+                }));
+        }
 
         if (result is not { Succeeded: true } ||
             request.HasPromptValue(PromptValues.Login) ||

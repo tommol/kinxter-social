@@ -94,6 +94,38 @@ internal sealed class AuthAdminPageRenderer
             error is null ? StatusCodes.Status200OK : StatusCodes.Status400BadRequest);
     }
 
+    public Task<IResult> ClientAsync(
+        HttpContext context,
+        AuthAdminOptions options,
+        string username,
+        AuthAdminRealmDetails realm,
+        AuthAdminClientDetails? client = null,
+        AuthAdminCreateClientCommand? attemptedCreate = null,
+        AuthAdminUpdateClientCommand? attemptedUpdate = null,
+        string? error = null,
+        string? clientSecret = null,
+        bool saved = false)
+    {
+        var model = new AuthAdminClientPageViewModel(
+            username,
+            options.PathBase,
+            $"{options.PathBase}/logout",
+            GetAntiforgeryToken(context),
+            realm,
+            client,
+            attemptedCreate,
+            attemptedUpdate,
+            error,
+            clientSecret,
+            saved);
+
+        return RenderResultAsync(
+            context,
+            "/Views/AuthAdmin/Client.cshtml",
+            model,
+            error is null ? StatusCodes.Status200OK : StatusCodes.Status400BadRequest);
+    }
+
     private string GetAntiforgeryToken(HttpContext context)
     {
         return this.antiforgery.GetAndStoreTokens(context).RequestToken

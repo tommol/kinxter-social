@@ -99,12 +99,14 @@ internal static class AuthServiceCollectionExtensions
             })
             .AddServer(options =>
             {
-                options.SetAuthorizationEndpointUris("/connect/authorize")
-                    .SetEndSessionEndpointUris("/connect/logout")
-                    .SetPushedAuthorizationEndpointUris("/connect/par")
-                    .SetRevocationEndpointUris("/connect/revocation")
-                    .SetTokenEndpointUris("/connect/token")
-                    .SetUserInfoEndpointUris("/connect/userinfo");
+                options.SetConfigurationEndpointUris(".well-known/openid-configuration")
+                    .SetJsonWebKeySetEndpointUris(".well-known/jwks")
+                    .SetAuthorizationEndpointUris("connect/authorize")
+                    .SetEndSessionEndpointUris("connect/logout")
+                    .SetPushedAuthorizationEndpointUris("connect/par")
+                    .SetRevocationEndpointUris("connect/revocation")
+                    .SetTokenEndpointUris("connect/token")
+                    .SetUserInfoEndpointUris("connect/userinfo");
 
                 options.AllowAuthorizationCodeFlow()
                     .RequireProofKeyForCodeExchange()

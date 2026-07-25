@@ -3,6 +3,8 @@ using Kinxter.Auth.Infrastructure.Persistence;
 using Kinxter.Shared.Abstractions.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using OpenIddict.Abstractions;
 using Xunit;
 
 namespace Kinxter.Auth.Tests;
@@ -221,6 +223,126 @@ public sealed class AuthAdministrationTests
 
         Assert.False(result.Success);
         Assert.Contains("already used", result.Error);
+    }
+
+    [Fact]
+    public async Task Client_management_persists_registration_and_preserves_secret_during_edit()
+    {
+        var services = new ServiceCollection();
+        var databaseName = Guid.NewGuid().ToString("D");
+        var now = new DateTimeOffset(2026, 7, 26, 9, 0, 0, TimeSpan.Zero);
+        services.AddLogging();
+        services.AddDbContext<AuthDbContext>(options =>
+        {
+            options.UseInMemoryDatabase(databaseName);
+            options.UseOpenIddict();
+        });
+        services.AddOpenIddict()
+            .AddCore(options => options.UseEntityFrameworkCore().UseDbContext<AuthDbContext>());
+        services.AddSingleton<IClock>(new TestClock(now));
+        services.AddScoped<AuthClientAdministrationService>();
+
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var realm = CreateRealm();
+        dbContext.AuthRealms.Add(realm);
+        await dbContext.SaveChangesAsync();
+        var service = scope.ServiceProvider.GetRequiredService<AuthClientAdministrationService>();
+        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+
+        var created = await service.CreateClientAsync(
+            realm.Id,
+            new AuthAdminCreateClientCommand(
+                "standard-web",
+                "Standard web",
+                ["https://web.example/auth/callback"],
+                ["https://web.example"],
+                ["openid", "profile", "offline_access", "kinxter.api"]));
+
+        Assert.True(created.Success);
+        Assert.NotNull(created.ClientSecret);
+        var storedClient = await dbContext.AuthClients.SingleAsync();
+        Assert.Equal(realm.Id, storedClient.RealmId);
+        var application = await manager.FindByClientIdAsync("standard-web");
+        Assert.NotNull(application);
+        Assert.True(await manager.ValidateClientSecretAsync(application!, created.ClientSecret!));
+
+        var updated = await service.UpdateClientAsync(
+            realm.Id,
+            storedClient.Id,
+            new AuthAdminUpdateClientCommand(
+                "Renamed display",
+                false,
+                ["https://web.example/api/auth/callback/kinxter"],
+                ["https://web.example/signed-out"],
+                ["openid", "email", "kinxter.api"]));
+
+        Assert.True(updated.Success);
+        Assert.False((await dbContext.AuthClients.SingleAsync()).Enabled);
+        application = await manager.FindByClientIdAsync("standard-web");
+        Assert.NotNull(application);
+        Assert.True(await manager.ValidateClientSecretAsync(application!, created.ClientSecret!));
+        Assert.Equal(
+            new[] { "https://web.example/api/auth/callback/kinxter" },
+            (await manager.GetRedirectUrisAsync(application!)).ToArray());
+
+        var rotated = await service.RotateSecretAsync(realm.Id, storedClient.Id);
+
+        Assert.True(rotated.Success);
+        Assert.NotNull(rotated.ClientSecret);
+        application = await manager.FindByClientIdAsync("standard-web");
+        Assert.NotNull(application);
+        Assert.False(await manager.ValidateClientSecretAsync(application!, created.ClientSecret!));
+        Assert.True(await manager.ValidateClientSecretAsync(application!, rotated.ClientSecret!));
+        Assert.Equal(now, (await dbContext.AuthClients.SingleAsync()).UpdatedAt);
+    }
+
+    [Fact]
+    public async Task Client_management_rejects_non_oidc_and_unsafe_registrations()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddDbContext<AuthDbContext>(options =>
+        {
+            options.UseInMemoryDatabase(Guid.NewGuid().ToString("D"));
+            options.UseOpenIddict();
+        });
+        services.AddOpenIddict()
+            .AddCore(options => options.UseEntityFrameworkCore().UseDbContext<AuthDbContext>());
+        services.AddSingleton<IClock>(new TestClock(DateTimeOffset.UtcNow));
+        services.AddScoped<AuthClientAdministrationService>();
+
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var realm = CreateRealm();
+        dbContext.AuthRealms.Add(realm);
+        await dbContext.SaveChangesAsync();
+        var service = scope.ServiceProvider.GetRequiredService<AuthClientAdministrationService>();
+
+        var missingOpenId = await service.CreateClientAsync(
+            realm.Id,
+            new AuthAdminCreateClientCommand(
+                "invalid-client",
+                "Invalid client",
+                ["https://web.example/callback"],
+                [],
+                ["profile"]));
+        var unsafeRedirect = await service.CreateClientAsync(
+            realm.Id,
+            new AuthAdminCreateClientCommand(
+                "unsafe-client",
+                "Unsafe client",
+                ["javascript:alert(1)"],
+                [],
+                ["openid"]));
+
+        Assert.False(missingOpenId.Success);
+        Assert.Contains("openid", missingOpenId.Error);
+        Assert.False(unsafeRedirect.Success);
+        Assert.Contains("HTTP or HTTPS", unsafeRedirect.Error);
+        Assert.Empty(await dbContext.AuthClients.ToArrayAsync());
     }
 
     private static AuthDbContext CreateDbContext()

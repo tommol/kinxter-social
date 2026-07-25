@@ -35,6 +35,16 @@ internal static class AuthAdminEndpoints
             .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
         group.MapPost("/realms/{realmId:guid}", UpdateRealmAsync)
             .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapGet("/realms/{realmId:guid}/clients/new", GetNewClientAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapPost("/realms/{realmId:guid}/clients", CreateClientAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapGet("/realms/{realmId:guid}/clients/{clientId:guid}", GetClientAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapPost("/realms/{realmId:guid}/clients/{clientId:guid}", UpdateClientAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapPost("/realms/{realmId:guid}/clients/{clientId:guid}/rotate-secret", RotateClientSecretAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
 
         return app;
     }
@@ -249,6 +259,218 @@ internal static class AuthAdminEndpoints
                 realm,
                 command,
                 result.Error);
+    }
+
+    private static async Task<IResult> GetNewClientAsync(
+        Guid realmId,
+        HttpContext context,
+        AuthAdministrationService administration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        CancellationToken cancellationToken)
+    {
+        var realm = await administration.GetRealmAsync(realmId, cancellationToken);
+
+        return realm is null
+            ? Results.NotFound()
+            : await renderer.ClientAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                realm);
+    }
+
+    private static async Task<IResult> CreateClientAsync(
+        Guid realmId,
+        HttpContext context,
+        AuthAdministrationService administration,
+        AuthClientAdministrationService clientAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        if (!await IsAntiforgeryValidAsync(context, antiforgery))
+        {
+            return Results.BadRequest();
+        }
+
+        var form = await context.Request.ReadFormAsync(cancellationToken);
+        var command = new AuthAdminCreateClientCommand(
+            form["clientId"].ToString(),
+            form["displayName"].ToString(),
+            SplitLines(form["redirectUris"].ToString()),
+            SplitLines(form["postLogoutRedirectUris"].ToString()),
+            SplitScopes(form["scopes"].ToString()));
+        var result = await clientAdministration.CreateClientAsync(
+            realmId,
+            command,
+            cancellationToken);
+
+        if (result.RealmNotFound)
+        {
+            return Results.NotFound();
+        }
+
+        var realm = await administration.GetRealmAsync(realmId, cancellationToken);
+
+        if (realm is null)
+        {
+            return Results.NotFound();
+        }
+
+        return result.Success
+            ? await renderer.ClientAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                realm,
+                result.Client,
+                clientSecret: result.ClientSecret)
+            : await renderer.ClientAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                realm,
+                attemptedCreate: command,
+                error: result.Error);
+    }
+
+    private static async Task<IResult> GetClientAsync(
+        Guid realmId,
+        Guid clientId,
+        HttpContext context,
+        AuthAdministrationService administration,
+        AuthClientAdministrationService clientAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        CancellationToken cancellationToken,
+        bool saved = false)
+    {
+        var realm = await administration.GetRealmAsync(realmId, cancellationToken);
+        var client = await clientAdministration.GetClientAsync(realmId, clientId, cancellationToken);
+
+        return realm is null || client is null
+            ? Results.NotFound()
+            : await renderer.ClientAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                realm,
+                client,
+                saved: saved);
+    }
+
+    private static async Task<IResult> UpdateClientAsync(
+        Guid realmId,
+        Guid clientId,
+        HttpContext context,
+        AuthAdministrationService administration,
+        AuthClientAdministrationService clientAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        if (!await IsAntiforgeryValidAsync(context, antiforgery))
+        {
+            return Results.BadRequest();
+        }
+
+        var form = await context.Request.ReadFormAsync(cancellationToken);
+        var command = new AuthAdminUpdateClientCommand(
+            form["displayName"].ToString(),
+            form.ContainsKey("enabled"),
+            SplitLines(form["redirectUris"].ToString()),
+            SplitLines(form["postLogoutRedirectUris"].ToString()),
+            SplitScopes(form["scopes"].ToString()));
+        var result = await clientAdministration.UpdateClientAsync(
+            realmId,
+            clientId,
+            command,
+            cancellationToken);
+
+        if (result.ClientNotFound)
+        {
+            return Results.NotFound();
+        }
+
+        if (result.Success)
+        {
+            return Results.Redirect(
+                $"{options.PathBase}/realms/{realmId:D}/clients/{clientId:D}?saved=true");
+        }
+
+        var realm = await administration.GetRealmAsync(realmId, cancellationToken);
+        var client = await clientAdministration.GetClientAsync(realmId, clientId, cancellationToken);
+
+        return realm is null || client is null
+            ? Results.NotFound()
+            : await renderer.ClientAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                realm,
+                client,
+                attemptedUpdate: command,
+                error: result.Error);
+    }
+
+    private static async Task<IResult> RotateClientSecretAsync(
+        Guid realmId,
+        Guid clientId,
+        HttpContext context,
+        AuthAdministrationService administration,
+        AuthClientAdministrationService clientAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        if (!await IsAntiforgeryValidAsync(context, antiforgery))
+        {
+            return Results.BadRequest();
+        }
+
+        var result = await clientAdministration.RotateSecretAsync(
+            realmId,
+            clientId,
+            cancellationToken);
+
+        if (result.ClientNotFound)
+        {
+            return Results.NotFound();
+        }
+
+        var realm = await administration.GetRealmAsync(realmId, cancellationToken);
+
+        if (realm is null || result.Client is null)
+        {
+            return Results.NotFound();
+        }
+
+        return await renderer.ClientAsync(
+            context,
+            options,
+            GetAdministratorName(context.User),
+            realm,
+            result.Client,
+            error: result.Error,
+            clientSecret: result.ClientSecret);
+    }
+
+    private static string[] SplitLines(string value)
+    {
+        return value.Split(
+            ['\r', '\n'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static string[] SplitScopes(string value)
+    {
+        return value.Split(
+            ['\r', '\n', ',', ' ', '\t'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     private static async Task<bool> IsAntiforgeryValidAsync(

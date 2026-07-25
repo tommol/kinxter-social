@@ -48,64 +48,14 @@ internal static class AuthDatabaseExtensions
 
         foreach (var client in options.Realms.SelectMany(realm => realm.Clients))
         {
-            var descriptor = CreateOpenIddictApplicationDescriptor(client);
             var application = await applicationManager.FindByClientIdAsync(client.ClientId);
 
             if (application is null)
             {
-                await applicationManager.CreateAsync(descriptor);
-            }
-            else
-            {
-                await applicationManager.UpdateAsync(application, descriptor);
+                await applicationManager.CreateAsync(
+                    OpenIddictClientDescriptorFactory.Create(client));
             }
         }
-    }
-
-    private static OpenIddictApplicationDescriptor CreateOpenIddictApplicationDescriptor(AuthClientOptions client)
-    {
-        var descriptor = new OpenIddictApplicationDescriptor
-        {
-            ClientId = client.ClientId,
-            ClientSecret = client.ClientSecret,
-            ClientType = ClientTypes.Confidential,
-            ConsentType = ConsentTypes.Implicit,
-            DisplayName = client.DisplayName,
-            Permissions =
-            {
-                Permissions.Endpoints.Authorization,
-                Permissions.Endpoints.EndSession,
-                Permissions.Endpoints.PushedAuthorization,
-                Permissions.Endpoints.Revocation,
-                Permissions.Endpoints.Token,
-                Permissions.GrantTypes.AuthorizationCode,
-                Permissions.GrantTypes.RefreshToken,
-                Permissions.ResponseTypes.Code,
-                Permissions.Scopes.Email,
-                Permissions.Scopes.Profile,
-                Permissions.Scopes.Roles
-            },
-            Requirements =
-            {
-                Requirements.Features.ProofKeyForCodeExchange
-            }
-        };
-
-        foreach (var redirectUri in client.RedirectUris.Where(uri => !string.IsNullOrWhiteSpace(uri)))
-        {
-            descriptor.RedirectUris.Add(new Uri(redirectUri));
-        }
-
-        foreach (var logoutUri in client.PostLogoutRedirectUris.Where(uri => !string.IsNullOrWhiteSpace(uri)))
-        {
-            descriptor.PostLogoutRedirectUris.Add(new Uri(logoutUri));
-        }
-
-        descriptor.AddScopePermissions(client.Scopes
-            .Where(scope => !IsStandardScope(scope))
-            .ToArray());
-
-        return descriptor;
     }
 
     private static async Task SeedAuthRealmsAsync(IServiceProvider services, AuthServerOptions options)
@@ -136,7 +86,7 @@ internal static class AuthDatabaseExtensions
                 dbContext.AuthRealms.Add(realm);
             }
 
-            UpsertAuthClients(realm, realmOptions.Clients, now);
+            BootstrapAuthClients(realm, realmOptions.Clients, now);
         }
 
         await dbContext.SaveChangesAsync();
@@ -193,52 +143,35 @@ internal static class AuthDatabaseExtensions
         realmRegistry.Replace(realms);
     }
 
-    private static void UpsertAuthClients(
+    private static void BootstrapAuthClients(
         AuthRealm realm,
         IReadOnlyCollection<AuthClientOptions> clientOptions,
         DateTimeOffset now)
     {
-        var configuredClientIds = clientOptions
-            .Select(client => client.ClientId)
-            .Where(clientId => !string.IsNullOrWhiteSpace(clientId))
-            .Select(clientId => clientId.Trim())
-            .ToHashSet(StringComparer.Ordinal);
-
         foreach (var configuredClient in clientOptions.Where(client => !string.IsNullOrWhiteSpace(client.ClientId)))
         {
             var clientId = configuredClient.ClientId.Trim();
             var client = realm.Clients.SingleOrDefault(current =>
                 string.Equals(current.ClientId, clientId, StringComparison.Ordinal));
 
-            if (client is null)
+            if (client is not null)
             {
-                client = new AuthClient
-                {
-                    Id = Guid.CreateVersion7(now),
-                    RealmId = realm.Id,
-                    ClientId = clientId,
-                    CreatedAt = now
-                };
-
-                realm.Clients.Add(client);
-            }
-            else
-            {
-                client.UpdatedAt = now;
+                continue;
             }
 
-            client.DisplayName = configuredClient.DisplayName;
-            client.Enabled = true;
-            client.ClientSecretConfigured = !string.IsNullOrWhiteSpace(configuredClient.ClientSecret);
-            client.RedirectUris = CleanValues(configuredClient.RedirectUris);
-            client.PostLogoutRedirectUris = CleanValues(configuredClient.PostLogoutRedirectUris);
-            client.Scopes = CleanValues(configuredClient.Scopes);
-        }
-
-        foreach (var removedClient in realm.Clients.Where(client => !configuredClientIds.Contains(client.ClientId)))
-        {
-            removedClient.Enabled = false;
-            removedClient.UpdatedAt = now;
+            realm.Clients.Add(new AuthClient
+            {
+                Id = Guid.CreateVersion7(now),
+                RealmId = realm.Id,
+                ClientId = clientId,
+                DisplayName = configuredClient.DisplayName,
+                Enabled = true,
+                ClientSecretConfigured = !string.IsNullOrWhiteSpace(configuredClient.ClientSecret),
+                RedirectUris = CleanValues(configuredClient.RedirectUris),
+                PostLogoutRedirectUris = CleanValues(configuredClient.PostLogoutRedirectUris),
+                Scopes = CleanValues(configuredClient.Scopes),
+                CreatedAt = now
+            });
         }
     }
 

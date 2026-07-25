@@ -1,127 +1,149 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as oidc from "openid-client";
 
 const stateCookie = "kinxter_auth_state";
 const verifierCookie = "kinxter_auth_verifier";
+const nonceCookie = "kinxter_auth_nonce";
 const accessTokenCookie = "kinxter_access_token";
 const refreshTokenCookie = "kinxter_refresh_token";
 const idTokenCookie = "kinxter_id_token";
 
-type TokenResponse = {
-  access_token?: string;
-  refresh_token?: string;
-  id_token?: string;
-  expires_in?: number;
-  error?: string;
-  error_description?: string;
-};
+let cachedConfiguration:
+  | { key: string; value: Promise<oidc.Configuration> }
+  | undefined;
 
 export function getAccessToken(request: NextRequest) {
   return request.cookies.get(accessTokenCookie)?.value ?? null;
 }
 
 export async function startLogin(request: NextRequest, scopes: string[]) {
-  const state = randomBase64Url(32);
-  const verifier = randomBase64Url(48);
-  const challenge = await codeChallenge(verifier);
-  const redirectUri = getRedirectUri(request);
-  const authorizeUrl = new URL(`${getIssuer()}/connect/authorize`);
-
-  authorizeUrl.searchParams.set("client_id", getClientId());
-  authorizeUrl.searchParams.set("redirect_uri", redirectUri);
-  authorizeUrl.searchParams.set("response_type", "code");
-  authorizeUrl.searchParams.set("scope", scopes.join(" "));
-  authorizeUrl.searchParams.set("state", state);
-  authorizeUrl.searchParams.set("code_challenge", challenge);
-  authorizeUrl.searchParams.set("code_challenge_method", "S256");
-
+  const configuration = await getConfiguration();
+  const state = oidc.randomState();
+  const verifier = oidc.randomPKCECodeVerifier();
+  const nonce = oidc.randomNonce();
+  const challenge = await oidc.calculatePKCECodeChallenge(verifier);
+  const authorizeUrl = oidc.buildAuthorizationUrl(configuration, {
+    redirect_uri: getRedirectUri(request),
+    response_type: "code",
+    scope: scopes.join(" "),
+    state,
+    nonce,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+  });
   const response = NextResponse.redirect(authorizeUrl);
   const cookieOptions = getTransientCookieOptions();
 
   response.cookies.set(stateCookie, state, cookieOptions);
   response.cookies.set(verifierCookie, verifier, cookieOptions);
+  response.cookies.set(nonceCookie, nonce, cookieOptions);
 
   return response;
 }
 
 export async function completeLogin(request: NextRequest) {
-  const url = request.nextUrl;
-  const error = url.searchParams.get("error");
-
-  if (error) {
-    return NextResponse.json(
-      { error, error_description: url.searchParams.get("error_description") },
-      { status: 400 },
-    );
-  }
-
-  const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
   const expectedState = request.cookies.get(stateCookie)?.value;
   const verifier = request.cookies.get(verifierCookie)?.value;
+  const expectedNonce = request.cookies.get(nonceCookie)?.value;
 
-  if (!code || !state || !expectedState || !verifier || state !== expectedState) {
-    return NextResponse.json({ error: "invalid_callback" }, { status: 400 });
+  if (!expectedState || !verifier || !expectedNonce) {
+    return NextResponse.json({ error: "invalid_callback_session" }, { status: 400 });
   }
 
-  const body = new URLSearchParams({
-    grant_type: "authorization_code",
-    client_id: getClientId(),
-    client_secret: getClientSecret(),
-    redirect_uri: getRedirectUri(request),
-    code,
-    code_verifier: verifier,
-  });
-  const tokenResponse = await fetch(`${getIssuer()}/connect/token`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded",
-      accept: "application/json",
-    },
-    body,
-    cache: "no-store",
-  });
-  const tokenPayload = (await tokenResponse.json()) as TokenResponse;
+  try {
+    const configuration = await getConfiguration();
+    const tokens = await oidc.authorizationCodeGrant(
+      configuration,
+      new URL(request.url),
+      {
+        pkceCodeVerifier: verifier,
+        expectedState,
+        expectedNonce,
+        idTokenExpected: true,
+      },
+    );
+    const response = NextResponse.redirect(new URL("/", request.nextUrl.origin));
+    const sessionOptions = getSessionCookieOptions(tokens.expires_in ?? 3600);
 
-  if (!tokenResponse.ok || !tokenPayload.access_token) {
+    clearTransientCookies(response);
+    response.cookies.set(accessTokenCookie, tokens.access_token, sessionOptions);
+
+    if (tokens.refresh_token) {
+      response.cookies.set(
+        refreshTokenCookie,
+        tokens.refresh_token,
+        getSessionCookieOptions(30 * 24 * 3600),
+      );
+    }
+
+    if (tokens.id_token) {
+      response.cookies.set(idTokenCookie, tokens.id_token, sessionOptions);
+    }
+
+    return response;
+  } catch (error) {
     return NextResponse.json(
       {
-        error: tokenPayload.error ?? "token_exchange_failed",
-        error_description: tokenPayload.error_description,
+        error: "oidc_callback_failed",
+        error_description:
+          error instanceof Error ? error.message : "The OIDC callback could not be validated.",
       },
       { status: 400 },
     );
   }
-
-  const response = NextResponse.redirect(new URL("/", request.nextUrl.origin));
-  const sessionOptions = getSessionCookieOptions(tokenPayload.expires_in ?? 3600);
-
-  response.cookies.delete(stateCookie);
-  response.cookies.delete(verifierCookie);
-  response.cookies.set(accessTokenCookie, tokenPayload.access_token, sessionOptions);
-
-  if (tokenPayload.refresh_token) {
-    response.cookies.set(refreshTokenCookie, tokenPayload.refresh_token, getSessionCookieOptions(30 * 24 * 3600));
-  }
-
-  if (tokenPayload.id_token) {
-    response.cookies.set(idTokenCookie, tokenPayload.id_token, sessionOptions);
-  }
-
-  return response;
 }
 
-export function logout(request: NextRequest) {
-  const logoutUrl = new URL(`${getIssuer()}/connect/logout`);
+export async function logout(request: NextRequest) {
+  const configuration = await getConfiguration();
+  const idToken = request.cookies.get(idTokenCookie)?.value;
+  const parameters: Record<string, string> = {
+    post_logout_redirect_uri: request.nextUrl.origin,
+  };
 
-  logoutUrl.searchParams.set("post_logout_redirect_uri", request.nextUrl.origin);
+  if (idToken) {
+    parameters.id_token_hint = idToken;
+  }
 
-  const response = NextResponse.redirect(logoutUrl);
+  const response = NextResponse.redirect(
+    oidc.buildEndSessionUrl(configuration, parameters),
+  );
 
+  clearTransientCookies(response);
   response.cookies.delete(accessTokenCookie);
   response.cookies.delete(refreshTokenCookie);
   response.cookies.delete(idTokenCookie);
 
   return response;
+}
+
+function getConfiguration() {
+  const issuer = getIssuer();
+  const clientId = getClientId();
+  const clientSecret = getClientSecret();
+  const key = `${issuer}\u0000${clientId}\u0000${clientSecret}`;
+
+  if (!cachedConfiguration || cachedConfiguration.key !== key) {
+    const issuerUrl = new URL(issuer);
+    const allowInsecureHttp =
+      issuerUrl.protocol === "http:" &&
+      (process.env.NODE_ENV !== "production" ||
+        process.env.AUTH_ALLOW_INSECURE_HTTP === "true");
+
+    cachedConfiguration = {
+      key,
+      value: oidc.discovery(
+        issuerUrl,
+        clientId,
+        clientSecret,
+        undefined,
+        allowInsecureHttp
+          ? { execute: [oidc.allowInsecureRequests] }
+          : undefined,
+      ),
+    };
+  }
+
+  return cachedConfiguration.value;
 }
 
 function getIssuer() {
@@ -166,20 +188,12 @@ function getSessionCookieOptions(maxAge: number) {
   };
 }
 
+function clearTransientCookies(response: NextResponse) {
+  response.cookies.delete(stateCookie);
+  response.cookies.delete(verifierCookie);
+  response.cookies.delete(nonceCookie);
+}
+
 function useSecureCookies() {
   return process.env.AUTH_COOKIE_SECURE === "true";
-}
-
-function randomBase64Url(bytes: number) {
-  const array = new Uint8Array(bytes);
-
-  crypto.getRandomValues(array);
-
-  return Buffer.from(array).toString("base64url");
-}
-
-async function codeChallenge(verifier: string) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
-
-  return Buffer.from(digest).toString("base64url");
 }

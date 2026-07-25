@@ -137,6 +137,7 @@ services:
       AUTH_ISSUER: ${AUTH_PUBLIC_ISSUER:-http://localhost:8081/realms/public}
       AUTH_CLIENT_ID: kinxter-web
       AUTH_CLIENT_SECRET: ${KINXTER_WEB_CLIENT_SECRET:-kinxter-web-dev-secret}
+      AUTH_ALLOW_INSECURE_HTTP: "true"
       AUTH_SECRET: ${KINXTER_WEB_AUTH_SECRET:-kinxter-web-dev-auth-secret}
       KINXTER_API_BASE_URL: ${KINXTER_API_BASE_URL:-http://api:8080}
     ports:
@@ -157,6 +158,7 @@ services:
       AUTH_ISSUER: ${AUTH_BACKOFFICE_ISSUER:-http://localhost:8081/realms/backoffice}
       AUTH_CLIENT_ID: kinxter-admin
       AUTH_CLIENT_SECRET: ${KINXTER_ADMIN_CLIENT_SECRET:-kinxter-admin-dev-secret}
+      AUTH_ALLOW_INSECURE_HTTP: "true"
       AUTH_SECRET: ${KINXTER_ADMIN_AUTH_SECRET:-kinxter-admin-dev-auth-secret}
     ports:
       - "${ADMIN_HTTP_PORT:-3001}:3001"

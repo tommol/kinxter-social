@@ -67,10 +67,15 @@ internal sealed class AuthAdministrationService
         Guid realmId,
         CancellationToken cancellationToken = default)
     {
-        return await this.dbContext.AuthRealms
+        var realm = await this.dbContext.AuthRealms
             .AsNoTracking()
-            .Where(realm => realm.Id == realmId)
-            .Select(realm => new AuthAdminRealmDetails(
+            .Include(current => current.Clients)
+            .Where(current => current.Id == realmId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return realm is null
+            ? null
+            : new AuthAdminRealmDetails(
                 realm.Id,
                 realm.Name,
                 realm.Issuer,
@@ -78,8 +83,19 @@ internal sealed class AuthAdministrationService
                 realm.MfaPolicy,
                 realm.SignupEnabled,
                 realm.CreatedAt,
-                realm.UpdatedAt))
-            .SingleOrDefaultAsync(cancellationToken);
+                realm.UpdatedAt,
+                realm.Clients
+                    .OrderBy(client => client.ClientId, StringComparer.Ordinal)
+                    .Select(client => new AuthAdminClientSummary(
+                        client.Id,
+                        client.ClientId,
+                        client.DisplayName,
+                        client.Enabled,
+                        client.ClientSecretConfigured,
+                        client.RedirectUris,
+                        client.Scopes,
+                        client.UpdatedAt))
+                    .ToArray());
     }
 
     public async Task<AuthAdminUpdateRealmResult> UpdateRealmAsync(
@@ -188,7 +204,8 @@ internal sealed record AuthAdminRealmDetails(
     AuthMfaPolicy MfaPolicy,
     bool SignupEnabled,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? UpdatedAt);
+    DateTimeOffset? UpdatedAt,
+    IReadOnlyList<AuthAdminClientSummary> Clients);
 
 internal sealed record AuthAdminUpdateRealmCommand(
     string Issuer,

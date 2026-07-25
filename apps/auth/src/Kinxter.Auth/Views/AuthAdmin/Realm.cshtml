@@ -95,5 +95,35 @@
         </div>
       </form>
     </section>
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">OpenID Connect</p>
+        <h2>Clients</h2>
+        <p class="subtitle">Registrations are stored in the auth database and applied immediately.</p>
+      </div>
+      <a class="button" href="@Model.ControlPath/realms/@Model.RealmId/clients/new">Add client</a>
+    </div>
+    @if (Model.Clients.Count == 0)
+    {
+      <section class="panel panel-body">
+        <p class="subtitle">No OIDC clients are registered for this realm.</p>
+      </section>
+    }
+    else
+    {
+      <section class="panel client-list">
+        @foreach (var client in Model.Clients)
+        {
+          <a class="client-row" href="@Model.ControlPath/realms/@Model.RealmId/clients/@client.Id">
+            <div>
+              <strong>@client.DisplayName</strong>
+              <code>@client.ClientId</code>
+            </div>
+            <div class="client-scopes">@string.Join(" · ", client.Scopes)</div>
+            <span class="badge @(client.Enabled ? "" : "off")">@(client.Enabled ? "Enabled" : "Disabled")</span>
+          </a>
+        }
+      </section>
+    }
   </main>
 </div>

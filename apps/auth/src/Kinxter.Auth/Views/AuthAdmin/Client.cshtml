@@ -1,0 +1,132 @@
+@model Kinxter.Auth.Administration.AuthAdminClientPageViewModel
+@{
+    Layout = "/Views/AuthAdmin/_Layout.cshtml";
+    ViewData["Title"] = Model.IsNew
+        ? $"New OIDC client · {Model.RealmName}"
+        : $"{Model.ClientId} · Kinxter Auth Control";
+    var clientAction = Model.IsNew
+        ? $"{Model.ControlPath}/realms/{Model.RealmId}/clients"
+        : $"{Model.ControlPath}/realms/{Model.RealmId}/clients/{Model.ClientDatabaseId}";
+}
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" href="@Model.ControlPath">
+      <span class="brand-mark">K</span>
+      <span>Kinxter Auth Control</span>
+    </a>
+    <div class="topbar-meta">
+      <span>@Model.Username</span>
+      <form method="post" action="@Model.LogoutPath">
+        <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+        <button class="logout" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+  <main>
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">@Model.RealmName · OIDC client</p>
+        <h1>@(Model.IsNew ? "New client" : Model.DisplayName)</h1>
+        <p class="subtitle">Confidential Authorization Code client with PKCE.</p>
+      </div>
+      <a class="button secondary" href="@Model.ControlPath/realms/@Model.RealmId">Back to realm</a>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+      <p class="notice error">@Model.Error</p>
+    }
+    @if (Model.Saved)
+    {
+      <p class="notice success">Client registration was saved and applied.</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ClientSecret))
+    {
+      <section class="secret-box">
+        <strong>Copy the client secret now</strong>
+        <p>It is stored only as a hash and will not be shown again.</p>
+        <code>@Model.ClientSecret</code>
+      </section>
+    }
+    <section class="panel panel-body">
+      <form method="post" action="@clientAction">
+        <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+        <div class="form-grid">
+          <div class="field">
+            <label for="clientId">Client ID</label>
+            @if (Model.IsNew)
+            {
+              <input id="clientId" name="clientId" value="@Model.ClientId" autocomplete="off" required>
+            }
+            else
+            {
+              <input id="clientId" value="@Model.ClientId" readonly>
+            }
+            <p class="help">Stable application identifier. It cannot be renamed.</p>
+          </div>
+          <div class="field">
+            <label for="displayName">Display name</label>
+            <input id="displayName" name="displayName" value="@Model.DisplayName" required>
+          </div>
+          <div class="field full">
+            <label for="redirectUris">Redirect URIs</label>
+            <textarea id="redirectUris" name="redirectUris" rows="4" required>@string.Join("\n", Model.RedirectUris)</textarea>
+            <p class="help">One exact absolute callback URL per line.</p>
+          </div>
+          <div class="field full">
+            <label for="postLogoutRedirectUris">Post-logout redirect URIs</label>
+            <textarea id="postLogoutRedirectUris" name="postLogoutRedirectUris" rows="3">@string.Join("\n", Model.PostLogoutRedirectUris)</textarea>
+            <p class="help">One exact absolute URL per line.</p>
+          </div>
+          <div class="field full">
+            <label for="scopes">Allowed scopes</label>
+            <textarea id="scopes" name="scopes" rows="3" required>@string.Join(" ", Model.Scopes)</textarea>
+            <p class="help">Supported: openid, profile, email, roles, offline_access, kinxter.api, kinxter.admin.</p>
+          </div>
+          @if (!Model.IsNew)
+          {
+            <div class="field full">
+              <label>Status</label>
+              <div class="check">
+                @if (Model.Enabled)
+                {
+                  <input id="enabled" name="enabled" type="checkbox" checked>
+                }
+                else
+                {
+                  <input id="enabled" name="enabled" type="checkbox">
+                }
+                <label for="enabled">Allow this client to authenticate in @Model.RealmName</label>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="actions">
+          <div class="metadata">
+            @if (Model.CreatedAt is not null)
+            {
+              <span>Created @Model.CreatedAt.Value.ToString("u")</span>
+            }
+            @if (Model.UpdatedAt is not null)
+            {
+              <span>Updated @Model.UpdatedAt.Value.ToString("u")</span>
+            }
+          </div>
+          <button class="button" type="submit">@(Model.IsNew ? "Create client" : "Save client")</button>
+        </div>
+      </form>
+    </section>
+    @if (!Model.IsNew)
+    {
+      <section class="panel panel-body danger-zone">
+        <div>
+          <h2>Rotate client secret</h2>
+          <p class="subtitle">The current secret stops working immediately. Update the application configuration with the new value.</p>
+        </div>
+        <form method="post" action="@Model.ControlPath/realms/@Model.RealmId/clients/@Model.ClientDatabaseId/rotate-secret">
+          <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+          <button class="button danger" type="submit">Rotate secret</button>
+        </form>
+      </section>
+    }
+  </main>
+</div>

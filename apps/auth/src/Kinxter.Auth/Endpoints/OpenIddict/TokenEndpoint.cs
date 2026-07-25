@@ -15,6 +15,7 @@ internal static partial class OpenIddictEndpoints
         UserManager<AuthUser> userManager,
         SignInManager<AuthUser> signInManager,
         IOpenIddictScopeManager scopeManager,
+        AuthDbContext dbContext,
         AuthOptions authOptions)
     {
         var request = context.GetOpenIddictServerRequest()
@@ -28,6 +29,21 @@ internal static partial class OpenIddictEndpoints
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.UnsupportedGrantType,
                     [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The specified grant type is not supported."
+                }));
+        }
+
+        if (!await IsClientEnabledForRealmAsync(
+                dbContext,
+                request.ClientId,
+                authOptions,
+                context.RequestAborted))
+        {
+            return Results.Forbid(
+                authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client is not enabled for this realm."
                 }));
         }
 

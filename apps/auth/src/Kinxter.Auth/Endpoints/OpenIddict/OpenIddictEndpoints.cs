@@ -1,3 +1,6 @@
+using Kinxter.Auth.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
 namespace Kinxter.Auth;
 
 internal static partial class OpenIddictEndpoints
@@ -10,5 +13,25 @@ internal static partial class OpenIddictEndpoints
         app.MapMethods("/connect/userinfo", [HttpMethods.Get, HttpMethods.Post], UserInfoAsync);
 
         return app;
+    }
+
+    private static Task<bool> IsClientEnabledForRealmAsync(
+        AuthDbContext dbContext,
+        string? clientId,
+        AuthOptions authOptions,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return Task.FromResult(false);
+        }
+
+        return dbContext.AuthClients
+            .AsNoTracking()
+            .AnyAsync(
+                client => client.ClientId == clientId &&
+                    client.Enabled &&
+                    client.Realm.Name == authOptions.Realm,
+                cancellationToken);
     }
 }
