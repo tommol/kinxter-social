@@ -20,11 +20,14 @@ internal static class AuthDatabaseExtensions
         await dbContext.Database.MigrateAsync();
         await SeedAuthRealmsAsync(services, options);
         await SeedOpenIddictAsync(services, options);
+        await SeedAuthAdministratorAsync(services);
 
         foreach (var realmOptions in options.Realms)
         {
             await SeedRealmAdminAsync(services, realmOptions);
         }
+
+        await LoadRealmRegistryAsync(services);
     }
 
     private static async Task CreateSchemaAsync(AuthDbContext dbContext, string schema)
@@ -123,25 +126,71 @@ internal static class AuthDatabaseExtensions
                 {
                     Id = Guid.CreateVersion7(now),
                     Name = realmOptions.Realm,
+                    Issuer = realmOptions.Issuer,
+                    PathBase = realmOptions.PathBase,
+                    MfaPolicy = realmOptions.MfaPolicy,
+                    SignupEnabled = realmOptions.SignupEnabled,
                     CreatedAt = now
                 };
 
                 dbContext.AuthRealms.Add(realm);
             }
-            else
-            {
-                realm.UpdatedAt = now;
-            }
-
-            realm.Issuer = realmOptions.Issuer;
-            realm.PathBase = realmOptions.PathBase;
-            realm.MfaPolicy = realmOptions.MfaPolicy;
-            realm.SignupEnabled = realmOptions.SignupEnabled;
 
             UpsertAuthClients(realm, realmOptions.Clients, now);
         }
 
         await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task SeedAuthAdministratorAsync(IServiceProvider services)
+    {
+        var options = services.GetRequiredService<AuthAdminOptions>();
+
+        if (!options.Enabled || !options.Bootstrap.IsConfigured)
+        {
+            return;
+        }
+
+        var dbContext = services.GetRequiredService<AuthDbContext>();
+        var normalizer = services.GetRequiredService<ILookupNormalizer>();
+        var passwordHasher = services.GetRequiredService<IPasswordHasher<AuthAdministrator>>();
+        var clock = services.GetRequiredService<IClock>();
+        var username = options.Bootstrap.Username!.Trim();
+        var normalizedUsername = normalizer.NormalizeName(username)
+            ?? throw new InvalidOperationException("The auth administrator username could not be normalized.");
+        var exists = await dbContext.AuthAdministrators
+            .AnyAsync(administrator => administrator.NormalizedUsername == normalizedUsername);
+
+        if (exists)
+        {
+            return;
+        }
+
+        var administrator = new AuthAdministrator
+        {
+            Id = Guid.CreateVersion7(clock.UtcNow),
+            Username = username,
+            NormalizedUsername = normalizedUsername,
+            CreatedAt = clock.UtcNow
+        };
+        administrator.PasswordHash = passwordHasher.HashPassword(
+            administrator,
+            options.Bootstrap.Password!);
+
+        dbContext.AuthAdministrators.Add(administrator);
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task LoadRealmRegistryAsync(IServiceProvider services)
+    {
+        var dbContext = services.GetRequiredService<AuthDbContext>();
+        var realmRegistry = services.GetRequiredService<AuthRealmRegistry>();
+        var realms = await dbContext.AuthRealms
+            .AsNoTracking()
+            .OrderBy(realm => realm.Name)
+            .ToArrayAsync();
+
+        realmRegistry.Replace(realms);
     }
 
     private static void UpsertAuthClients(

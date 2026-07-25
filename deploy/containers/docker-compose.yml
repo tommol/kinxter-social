@@ -46,6 +46,11 @@ services:
       Auth__DbSchema: auth
       Auth__CookieName: kinxter-auth
       Auth__EncryptionKey: ${AUTH_TOKEN_ENCRYPTION_KEY:-DRjd/GnduI3Efzen9V9BvbNUfc/VKgXltV7Kbk9sMkY=}
+      AuthAdmin__Enabled: ${AUTH_ADMIN_ENABLED:-false}
+      AuthAdmin__PathBase: ${AUTH_ADMIN_PATH_BASE:-/control}
+      AuthAdmin__CookieName: ${AUTH_ADMIN_COOKIE_NAME:-kinxter-auth-control}
+      AuthAdmin__Bootstrap__Username: ${AUTH_ADMIN_BOOTSTRAP_USERNAME:-}
+      AuthAdmin__Bootstrap__Password: ${AUTH_ADMIN_BOOTSTRAP_PASSWORD:-}
       Auth__Realms__0__Realm: ${AUTH_PUBLIC_REALM:-public}
       Auth__Realms__0__Issuer: ${AUTH_PUBLIC_ISSUER:-http://localhost:8081/realms/public}
       Auth__Realms__0__PathBase: ${AUTH_PUBLIC_PATH_BASE:-/realms/public}

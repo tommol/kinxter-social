@@ -6,6 +6,11 @@ public sealed record CurrentUserResponseDto(
     bool EmailVerified,
     Guid? AccountId,
     string? AccountStatus,
+    Guid? ProfileId,
     string? Handle,
     string? DisplayName,
+    string? Bio,
+    string? ProfilePictureUrl,
+    bool AccountRequired,
+    bool ProfileRequired,
     bool OnboardingRequired);

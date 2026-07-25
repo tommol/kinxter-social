@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 
-  const response = await fetch(`${getApiBaseUrl()}/api/v1/onboarding/account`, {
+  const response = await fetch(`${getApiBaseUrl()}/api/v1/profiles/me`, {
     method: "POST",
     cache: "no-store",
     headers: {

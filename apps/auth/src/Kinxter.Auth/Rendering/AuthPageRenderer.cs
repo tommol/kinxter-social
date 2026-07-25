@@ -31,15 +31,15 @@ internal sealed class AuthPageRenderer
         this.tempDataProvider = tempDataProvider;
     }
 
-    public Task<IResult> HomeAsync(HttpContext context, AuthServerOptions options)
+    public Task<IResult> HomeAsync(HttpContext context, AuthRealmRegistry realmRegistry)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(realmRegistry);
 
         var realmOptions = context.GetAuthRealmOptions();
 
         return realmOptions is null
-            ? RenderResultAsync(context, "/Views/Auth/Home.cshtml", new AuthServerHomeViewModel(options))
+            ? RenderResultAsync(context, "/Views/Auth/Home.cshtml", new AuthServerHomeViewModel(realmRegistry.Realms))
             : RenderResultAsync(context, "/Views/Auth/RealmHome.cshtml", new AuthRealmHomeViewModel(realmOptions));
     }
 

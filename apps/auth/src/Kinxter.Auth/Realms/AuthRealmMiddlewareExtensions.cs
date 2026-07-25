@@ -30,9 +30,9 @@ internal static class AuthRealmMiddlewareExtensions
 
         return app.Use(async (context, next) =>
         {
-            var serverOptions = context.RequestServices.GetRequiredService<AuthServerOptions>();
+            var realmRegistry = context.RequestServices.GetRequiredService<AuthRealmRegistry>();
 
-            if (serverOptions.TryFindByPath(context.Request.Path, out var realmOptions, out var remainingPath))
+            if (realmRegistry.TryFindByPath(context.Request.Path, out var realmOptions, out var remainingPath))
             {
                 var originalPath = context.Request.Path;
                 var originalPathBase = context.Request.PathBase;

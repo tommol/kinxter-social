@@ -4,10 +4,14 @@
   "description": "Kinxter Social monorepo.",
   "private": true,
   "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:infra": "podman compose -f deploy/containers/docker-compose.yml up --detach postgres nats",
     "auth:build": "dotnet build apps/auth/Kinxter.Auth.slnx",
     "auth:run": "dotnet run --project apps/auth/src/Kinxter.Auth/Kinxter.Auth.csproj",
+    "auth:watch": "dotnet watch --project apps/auth/src/Kinxter.Auth/Kinxter.Auth.csproj run --no-launch-profile --urls http://localhost:8081",
     "api:build": "dotnet build apps/api/Kinxter.slnx",
     "api:run": "dotnet run --project apps/api/src/Kinxter.Api/Kinxter.Api.csproj",
+    "api:watch": "dotnet watch --project apps/api/src/Kinxter.Api/Kinxter.Api.csproj run --no-launch-profile --urls http://localhost:8080",
     "admin:dev": "pnpm --filter @kinxter/admin dev",
     "admin:build": "pnpm --filter @kinxter/admin build",
     "admin:start": "pnpm --filter @kinxter/admin start",
@@ -15,6 +19,7 @@
     "web:build": "pnpm --filter @kinxter/web build",
     "web:start": "pnpm --filter @kinxter/web start",
     "test:functional": "node --test tests/functional/*.test.mjs",
+    "test:integration": "dotnet test tests/Kinxter.IntegrationTests/Kinxter.IntegrationTests.csproj",
     "containers:up": "podman compose -f deploy/containers/docker-compose.yml up --build",
     "containers:down": "podman compose -f deploy/containers/docker-compose.yml down"
   },

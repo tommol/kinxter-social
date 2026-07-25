@@ -21,11 +21,11 @@ internal sealed record AuthRealmLinkViewModel(
 
 internal sealed class AuthServerHomeViewModel
 {
-    public AuthServerHomeViewModel(AuthServerOptions options)
+    public AuthServerHomeViewModel(IEnumerable<AuthOptions> realms)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(realms);
 
-        Realms = options.Realms
+        Realms = realms
             .Select(realm => new AuthRealmLinkViewModel(realm.Realm, realm.PathBase))
             .ToArray();
     }

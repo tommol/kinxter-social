@@ -20,15 +20,21 @@ internal sealed class ProfileConfiguration : IEntityTypeConfiguration<Profile>
 
         builder.Property(profile => profile.Handle)
             .IsRequired()
-            .HasMaxLength(64);
+            .HasMaxLength(Profile.HandleMaxLength);
 
         builder.Property(profile => profile.NormalizedHandle)
             .IsRequired()
-            .HasMaxLength(64);
+            .HasMaxLength(Profile.HandleMaxLength);
 
         builder.Property(profile => profile.DisplayName)
             .IsRequired()
-            .HasMaxLength(120);
+            .HasMaxLength(Profile.DisplayNameMaxLength);
+
+        builder.Property(profile => profile.Bio)
+            .HasMaxLength(Profile.BioMaxLength);
+
+        builder.Property(profile => profile.ProfilePictureUrl)
+            .HasMaxLength(Profile.ProfilePictureUrlMaxLength);
 
         builder.Property(profile => profile.CreatedAt)
             .IsRequired();

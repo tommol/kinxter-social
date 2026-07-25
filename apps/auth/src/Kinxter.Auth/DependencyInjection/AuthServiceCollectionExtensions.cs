@@ -1,3 +1,4 @@
+using Kinxter.Auth.Administration;
 using Kinxter.Auth.Infrastructure.Persistence;
 using Kinxter.Shared.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore;
@@ -19,11 +20,13 @@ internal static class AuthServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration,
         IWebHostEnvironment environment,
-        AuthServerOptions authOptions)
+        AuthServerOptions authOptions,
+        AuthAdminOptions authAdminOptions)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(environment);
         ArgumentNullException.ThrowIfNull(authOptions);
+        ArgumentNullException.ThrowIfNull(authAdminOptions);
 
         var connectionString = configuration.GetConnectionString("Postgres")
             ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
@@ -33,6 +36,7 @@ internal static class AuthServiceCollectionExtensions
         var strictestRealm = authOptions.Realms.Any(realm => realm.RequiresMfa);
 
         services.AddSingleton(authOptions);
+        services.AddSingleton<AuthRealmRegistry>();
         services.AddHttpContextAccessor();
         services.AddControllersWithViews();
         services.AddScoped(services =>
@@ -159,6 +163,7 @@ internal static class AuthServiceCollectionExtensions
         services.AddScoped<AuthPageRenderer>();
         services.AddScoped<AuthIntegrationEventPublisher>();
         services.AddScoped<ExternalLoginAccountManager>();
+        services.AddAuthAdministration(authAdminOptions);
 
         return services;
     }

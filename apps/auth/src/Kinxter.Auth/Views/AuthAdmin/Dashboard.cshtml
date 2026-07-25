@@ -1,0 +1,56 @@
+@model Kinxter.Auth.Administration.AuthAdminDashboardPageViewModel
+@{
+    Layout = "/Views/AuthAdmin/_Layout.cshtml";
+    ViewData["Title"] = "Realms · Kinxter Auth Control";
+}
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" href="@Model.ControlPath">
+      <span class="brand-mark">K</span>
+      <span>Kinxter Auth Control</span>
+    </a>
+    <div class="topbar-meta">
+      <span>@Model.Username</span>
+      <form method="post" action="@Model.LogoutPath">
+        <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+        <button class="logout" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+  <main>
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Authentication topology</p>
+        <h1>Realms</h1>
+        <p class="subtitle">Runtime realm policies stored by Kinxter.Auth. Changes are applied immediately.</p>
+      </div>
+    </div>
+    @if (Model.Realms.Count == 0)
+    {
+      <section class="panel panel-body">
+        <h2>No realms are configured</h2>
+        <p class="subtitle">Bootstrap at least one realm through application configuration.</p>
+      </section>
+    }
+    else
+    {
+      <section class="realm-grid">
+      @foreach (var realm in Model.Realms)
+      {
+        <a class="realm-card" href="@Model.ControlPath/realms/@realm.Id">
+          <div class="realm-name">
+            <h2>@realm.Name</h2>
+            <span class="badge @(realm.SignupEnabled ? "" : "off")">@(realm.SignupEnabled ? "Signup open" : "Signup closed")</span>
+          </div>
+          <p class="realm-path">@realm.PathBase</p>
+          <div class="stats">
+            <div class="stat"><strong>@realm.ActiveUserCount</strong><span>Users</span></div>
+            <div class="stat"><strong>@realm.ActiveClientCount</strong><span>Clients</span></div>
+            <div class="stat"><strong>@(realm.MfaPolicy == Kinxter.Auth.AuthMfaPolicy.Required ? "Required" : "Step-up")</strong><span>MFA</span></div>
+          </div>
+        </a>
+      }
+      </section>
+    }
+  </main>
+</div>

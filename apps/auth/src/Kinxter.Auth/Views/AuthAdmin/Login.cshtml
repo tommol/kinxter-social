@@ -1,0 +1,29 @@
+@model Kinxter.Auth.Administration.AuthAdminLoginPageViewModel
+@{
+    Layout = "/Views/AuthAdmin/_Layout.cshtml";
+    ViewData["Title"] = "Sign in · Kinxter Auth Control";
+}
+<div class="login-shell">
+  <main class="panel login-card">
+    <div class="brand">
+      <span class="brand-mark">K</span>
+      <span>Kinxter Auth Control</span>
+    </div>
+    <p class="eyebrow">Independent control plane</p>
+    <h1>Administrator sign in</h1>
+    <p class="subtitle">This session is separate from every customer and backoffice realm.</p>
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+      <p class="notice error">@Model.Error</p>
+    }
+    <form method="post" action="@Model.LoginPath">
+      <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+      <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" required autofocus>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button class="button" type="submit">Sign in to control plane</button>
+    </form>
+  </main>
+</div>

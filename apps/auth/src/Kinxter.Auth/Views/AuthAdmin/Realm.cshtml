@@ -1,0 +1,99 @@
+@model Kinxter.Auth.Administration.AuthAdminRealmPageViewModel
+@{
+    Layout = "/Views/AuthAdmin/_Layout.cshtml";
+    ViewData["Title"] = $"{Model.Name} · Kinxter Auth Control";
+}
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" href="@Model.ControlPath">
+      <span class="brand-mark">K</span>
+      <span>Kinxter Auth Control</span>
+    </a>
+    <div class="topbar-meta">
+      <span>@Model.Username</span>
+      <form method="post" action="@Model.LogoutPath">
+        <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+        <button class="logout" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+  <main>
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Realm configuration</p>
+        <h1>@Model.Name</h1>
+        <p class="subtitle">Edit routing and authentication policies without changing control-plane access.</p>
+      </div>
+      <a class="button secondary" href="@Model.ControlPath">Back to realms</a>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+      <p class="notice error">@Model.Error</p>
+    }
+    @if (Model.Saved)
+    {
+      <p class="notice success">Realm configuration was saved and is active.</p>
+    }
+    <section class="panel panel-body">
+      <form method="post" action="@Model.ControlPath/realms/@Model.RealmId">
+        <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+        <div class="form-grid">
+          <div class="field">
+            <label for="name">Realm name</label>
+            <input id="name" value="@Model.Name" readonly>
+            <p class="help">The stable identifier cannot be changed from the panel.</p>
+          </div>
+          <div class="field">
+            <label for="pathBase">Path base</label>
+            <input id="pathBase" name="pathBase" value="@Model.PathBase" required>
+            <p class="help">Must start with <code>/realms/</code>.</p>
+          </div>
+          <div class="field full">
+            <label for="issuer">Issuer URL</label>
+            <input id="issuer" name="issuer" type="url" value="@Model.Issuer" required>
+            <p class="help">The URL path must match the realm path base.</p>
+          </div>
+          <div class="field">
+            <label for="mfaPolicy">MFA policy</label>
+            <select id="mfaPolicy" name="mfaPolicy">
+              @if (Model.MfaPolicy == Kinxter.Auth.AuthMfaPolicy.OptionalStepUp)
+              {
+                <option value="OptionalStepUp" selected>Optional step-up</option>
+                <option value="Required">Required</option>
+              }
+              else
+              {
+                <option value="OptionalStepUp">Optional step-up</option>
+                <option value="Required" selected>Required</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label>Registration</label>
+            <div class="check">
+              @if (Model.SignupEnabled)
+              {
+                <input id="signupEnabled" name="signupEnabled" type="checkbox" checked>
+              }
+              else
+              {
+                <input id="signupEnabled" name="signupEnabled" type="checkbox">
+              }
+              <label for="signupEnabled">Allow new user registrations</label>
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <div class="metadata">
+            <span>Created @Model.CreatedAt.ToString("u")</span>
+            @if (Model.UpdatedAt is not null)
+            {
+              <span>Updated @Model.UpdatedAt.Value.ToString("u")</span>
+            }
+          </div>
+          <button class="button" type="submit">Save realm</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</div>

@@ -14,6 +14,8 @@ public sealed class AuthDbContext : IdentityDbContext<AuthUser, IdentityRole<Gui
 
     public DbSet<AuthClient> AuthClients { get; set; } = null!;
 
+    public DbSet<AuthAdministrator> AuthAdministrators { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

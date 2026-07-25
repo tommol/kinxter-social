@@ -1,7 +1,7 @@
-using Kinxter.Accounts.Contracts.Events;
-using Kinxter.Profiles.Application.CreateProfileOnAccountCreated;
+using Kinxter.Profiles.Application.CompleteProfileOnboarding;
+using Kinxter.Profiles.Application.CreateCurrentProfile;
 using Kinxter.Profiles.Infrastructure.Persistence;
-using Kinxter.Shared.Abstractions.Events;
+using Kinxter.Shared.Abstractions.Application;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -38,6 +38,7 @@ public static class ProfilesModule
 
     private static void AddApplicationServices(IServiceCollection services)
     {
-        services.AddScoped<IModuleEventHandler<AccountCreated>, CreateProfileOnAccountCreatedHandler>();
+        services.AddScoped<ICommandHandler<CreateCurrentProfileCommand, CreateCurrentProfileResult>, CreateCurrentProfileHandler>();
+        services.AddScoped<ICommandHandler<CompleteProfileOnboardingCommand, CompleteProfileOnboardingResult>, CompleteProfileOnboardingHandler>();
     }
 }

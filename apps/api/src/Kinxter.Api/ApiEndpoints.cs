@@ -1,4 +1,6 @@
 using Kinxter.Accounts.Api;
+using Kinxter.Api.Authentication;
+using Kinxter.Profiles.Api;
 
 namespace Kinxter.Api;
 
@@ -9,7 +11,8 @@ internal static class ApiEndpoints
         var group = app.MapGroup("/api/v1");
 
         group.MapAccountsEndpoints();
-        group.MapOnboardingEndpoints();
+        group.MapCurrentUserEndpoints();
+        group.MapProfilesEndpoints(ApiAuthorizationPolicies.PublicUser);
         group.MapMonitoringEndpoints();
 
         return app;
