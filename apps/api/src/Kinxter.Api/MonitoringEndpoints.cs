@@ -16,7 +16,7 @@ internal static class MonitoringEndpoints
     {
         var group = app.MapGroup("/monitoring")
             .WithTags("Monitoring")
-            .RequireAuthorization(ApiAuthorizationPolicies.BackofficeAdmin);
+            .RequireAuthorization(ApiAuthorizationPolicies.MonitoringRead);
 
         group.MapGet("/overview", GetOverviewAsync)
             .WithName("GetMonitoringOverview")

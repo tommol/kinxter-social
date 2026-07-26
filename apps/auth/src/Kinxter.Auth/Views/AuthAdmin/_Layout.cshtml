@@ -76,12 +76,22 @@
     .client-row code{margin-top:5px;color:var(--muted);font-size:12px}
     .client-row small{display:block;margin-top:5px;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
     .client-scopes{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+    .user-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(180px,1fr) auto;align-items:center;gap:18px;padding:18px 20px;color:inherit;border-bottom:1px solid var(--line)}
+    .user-row:last-child{border-bottom:0}
+    .user-row:hover{background:#f8faf9;text-decoration:none}
+    .user-row strong,.user-row small{display:block}
+    .user-row small{margin-top:5px;color:var(--muted);font-size:11px}
+    .role-list{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+    .status-stack{display:flex;align-items:flex-end;flex-direction:column;gap:6px}
+    .inline-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .inline-actions form{margin:0}
+    .button.compact{padding:8px 11px;font-size:13px}
     .secret-box{margin:0 0 20px;padding:18px;border:1px solid #e4c565;border-radius:11px;background:#fff9df}
     .secret-box p{margin:5px 0 12px;color:#695c31;font-size:13px}
     .secret-box code{display:block;padding:12px;border-radius:7px;background:#fff;overflow-wrap:anywhere;user-select:all}
     .danger-zone{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:22px;border-color:#efcfcd}
     .danger-zone form{margin:0;flex:0 0 auto}
-    @@media(max-width:680px){.topbar{padding:14px 18px}.topbar-meta span{display:none}main{padding:28px 16px 48px}.page-head{display:block}.page-head .button{margin-top:16px}.form-grid,.choice-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.stats{grid-template-columns:repeat(3,1fr)}.section-head,.danger-zone{display:block}.section-head .button,.danger-zone form{margin-top:16px}.client-row{grid-template-columns:1fr}.client-row .badge{justify-self:start}}
+    @@media(max-width:680px){.topbar{padding:14px 18px}.topbar-meta span{display:none}main{padding:28px 16px 48px}.page-head{display:block}.page-head .button{margin-top:16px}.form-grid,.choice-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.stats{grid-template-columns:repeat(3,1fr)}.section-head,.danger-zone{display:block}.section-head .button,.danger-zone form{margin-top:16px}.client-row,.user-row{grid-template-columns:1fr}.client-row .badge,.user-row .badge{justify-self:start}.status-stack{align-items:flex-start}}
   </style>
 </head>
 <body>

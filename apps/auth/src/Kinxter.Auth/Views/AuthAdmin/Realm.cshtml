@@ -95,6 +95,17 @@
         </div>
       </form>
     </section>
+    @if (Model.CanManageUsers)
+    {
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Backoffice access</p>
+          <h2>Administrators</h2>
+          <p class="subtitle">Invite staff, assign least-privilege roles and revoke active sessions.</p>
+        </div>
+        <a class="button" href="@Model.ControlPath/realms/@Model.RealmId/users">Manage users</a>
+      </div>
+    }
     <div class="section-head">
       <div>
         <p class="eyebrow">OpenID Connect</p>

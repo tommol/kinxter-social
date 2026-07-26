@@ -1,0 +1,66 @@
+@model Kinxter.Auth.Administration.AuthAdminBackofficeUsersPageViewModel
+@{
+    Layout = "/Views/AuthAdmin/_Layout.cshtml";
+    ViewData["Title"] = "Backoffice users · Kinxter Auth Control";
+}
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" href="@Model.ControlPath">
+      <span class="brand-mark">K</span>
+      <span>Kinxter Auth Control</span>
+    </a>
+    <div class="topbar-meta">
+      <span>@Model.Username</span>
+      <form method="post" action="@Model.LogoutPath">
+        <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+        <button class="logout" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+  <main>
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Backoffice access</p>
+        <h1>Administrators</h1>
+        <p class="subtitle">Accounts in the @Model.Backoffice.RealmName realm. Signup remains closed and access is invitation-only.</p>
+      </div>
+      <div class="inline-actions">
+        <a class="button secondary" href="@Model.ControlPath/realms/@Model.Backoffice.RealmId">Back to realm</a>
+        <a class="button" href="@Model.ControlPath/realms/@Model.Backoffice.RealmId/users/new">Invite user</a>
+      </div>
+    </div>
+    @if (Model.Backoffice.Users.Count == 0)
+    {
+      <section class="panel panel-body">
+        <h2>No administrators</h2>
+        <p class="subtitle">Invite the first backoffice user and assign the minimum required role.</p>
+      </section>
+    }
+    else
+    {
+      <section class="panel client-list">
+        @foreach (var user in Model.Backoffice.Users)
+        {
+          <a class="user-row" href="@Model.ControlPath/realms/@Model.Backoffice.RealmId/users/@user.Id">
+            <div>
+              <strong>@user.Email</strong>
+              <small>Created @user.CreatedAt.ToString("u")</small>
+            </div>
+            <div class="role-list">@string.Join(" · ", user.Roles)</div>
+            <div class="status-stack">
+              <span class="badge @(user.Enabled ? "" : "off")">@(user.Enabled ? "Enabled" : "Disabled")</span>
+              @if (user.InvitationPending)
+              {
+                <span class="badge off">Invitation pending</span>
+              }
+              else
+              {
+                <span class="badge @(user.MfaEnabled ? "" : "off")">@(user.MfaEnabled ? "MFA enabled" : "MFA pending")</span>
+              }
+            </div>
+          </a>
+        }
+      </section>
+    }
+  </main>
+</div>

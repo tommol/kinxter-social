@@ -13,6 +13,97 @@ internal sealed record AuthAdminDashboardPageViewModel(
     string AntiforgeryToken,
     IReadOnlyList<AuthAdminRealmSummary> Realms);
 
+internal sealed record AuthAdminBackofficeUsersPageViewModel(
+    string Username,
+    string ControlPath,
+    string LogoutPath,
+    string AntiforgeryToken,
+    AuthAdminBackofficeUsers Backoffice);
+
+internal sealed class AuthAdminInviteUserPageViewModel
+{
+    public AuthAdminInviteUserPageViewModel(
+        string username,
+        string controlPath,
+        string logoutPath,
+        string antiforgeryToken,
+        Guid realmId,
+        string email,
+        IReadOnlyCollection<string> selectedRoles,
+        string? error)
+    {
+        Username = username;
+        ControlPath = controlPath;
+        LogoutPath = logoutPath;
+        AntiforgeryToken = antiforgeryToken;
+        RealmId = realmId;
+        Email = email;
+        SelectedRoles = selectedRoles;
+        Error = error;
+    }
+
+    public string Username { get; }
+
+    public string ControlPath { get; }
+
+    public string LogoutPath { get; }
+
+    public string AntiforgeryToken { get; }
+
+    public Guid RealmId { get; }
+
+    public string Email { get; }
+
+    public IReadOnlyCollection<string> SelectedRoles { get; }
+
+    public IReadOnlyList<AuthRoleDefinition> AvailableRoles => AuthRoles.Assignable;
+
+    public string? Error { get; }
+}
+
+internal sealed class AuthAdminBackofficeUserPageViewModel
+{
+    public AuthAdminBackofficeUserPageViewModel(
+        string username,
+        string controlPath,
+        string logoutPath,
+        string antiforgeryToken,
+        AuthAdminBackofficeUserDetails user,
+        IReadOnlyCollection<string>? attemptedRoles = null,
+        string? invitationUrl = null,
+        string? error = null,
+        bool saved = false)
+    {
+        Username = username;
+        ControlPath = controlPath;
+        LogoutPath = logoutPath;
+        AntiforgeryToken = antiforgeryToken;
+        User = user;
+        SelectedRoles = attemptedRoles ?? user.Roles;
+        InvitationUrl = invitationUrl;
+        Error = error;
+        Saved = saved;
+    }
+
+    public string Username { get; }
+
+    public string ControlPath { get; }
+
+    public string LogoutPath { get; }
+
+    public string AntiforgeryToken { get; }
+
+    public AuthAdminBackofficeUserDetails User { get; }
+
+    public IReadOnlyCollection<string> SelectedRoles { get; }
+
+    public string? InvitationUrl { get; }
+
+    public string? Error { get; }
+
+    public bool Saved { get; }
+}
+
 internal sealed class AuthAdminRealmPageViewModel
 {
     public AuthAdminRealmPageViewModel(
@@ -38,6 +129,7 @@ internal sealed class AuthAdminRealmPageViewModel
         CreatedAt = realm.CreatedAt;
         UpdatedAt = realm.UpdatedAt;
         Clients = realm.Clients;
+        CanManageUsers = string.Equals(realm.Name, AuthRealmNames.Backoffice, StringComparison.Ordinal);
         Error = error;
         Saved = saved;
     }
@@ -67,6 +159,8 @@ internal sealed class AuthAdminRealmPageViewModel
     public DateTimeOffset? UpdatedAt { get; }
 
     public IReadOnlyList<AuthAdminClientSummary> Clients { get; }
+
+    public bool CanManageUsers { get; }
 
     public string? Error { get; }
 

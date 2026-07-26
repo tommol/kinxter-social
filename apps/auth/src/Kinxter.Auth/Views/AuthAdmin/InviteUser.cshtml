@@ -1,0 +1,72 @@
+@model Kinxter.Auth.Administration.AuthAdminInviteUserPageViewModel
+@{
+    Layout = "/Views/AuthAdmin/_Layout.cshtml";
+    ViewData["Title"] = "Invite administrator · Kinxter Auth Control";
+}
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" href="@Model.ControlPath">
+      <span class="brand-mark">K</span>
+      <span>Kinxter Auth Control</span>
+    </a>
+    <div class="topbar-meta">
+      <span>@Model.Username</span>
+      <form method="post" action="@Model.LogoutPath">
+        <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+        <button class="logout" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+  <main>
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Backoffice access</p>
+        <h1>Invite administrator</h1>
+        <p class="subtitle">The activation link is displayed once. The user sets their own password and must configure MFA.</p>
+      </div>
+      <a class="button secondary" href="@Model.ControlPath/realms/@Model.RealmId/users">Back to users</a>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+      <p class="notice error">@Model.Error</p>
+    }
+    <section class="panel panel-body">
+      <form method="post" action="@Model.ControlPath/realms/@Model.RealmId/users">
+        <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" value="@Model.Email" autocomplete="off" required>
+        </div>
+        <div class="section-head">
+          <div>
+            <h2>Roles</h2>
+            <p class="subtitle">Choose the smallest set matching this person's responsibilities.</p>
+          </div>
+        </div>
+        <div class="choice-grid">
+          @foreach (var role in Model.AvailableRoles)
+          {
+            <div class="check">
+              @if (Model.SelectedRoles.Contains(role.Name))
+              {
+                <input id="role-@role.Name" name="roles" type="checkbox" value="@role.Name" checked>
+              }
+              else
+              {
+                <input id="role-@role.Name" name="roles" type="checkbox" value="@role.Name">
+              }
+              <label for="role-@role.Name">
+                <strong>@role.DisplayName</strong>
+                <small>@role.Description</small>
+              </label>
+            </div>
+          }
+        </div>
+        <div class="actions">
+          <span class="help">Signup remains disabled. Only this one invited account is created.</span>
+          <button class="button" type="submit">Create invitation</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</div>

@@ -18,6 +18,7 @@ internal static class AuthAdminServiceCollectionExtensions
         services.AddSingleton(options);
         services.AddScoped<AuthAdministrationService>();
         services.AddScoped<AuthClientAdministrationService>();
+        services.AddScoped<BackofficeUserAdministrationService>();
         services.AddScoped<AuthAdminPageRenderer>();
         services.AddSingleton<IPasswordHasher<AuthAdministrator>, PasswordHasher<AuthAdministrator>>();
 

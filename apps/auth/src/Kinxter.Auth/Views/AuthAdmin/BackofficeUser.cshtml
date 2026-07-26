@@ -1,0 +1,123 @@
+@model Kinxter.Auth.Administration.AuthAdminBackofficeUserPageViewModel
+@{
+    Layout = "/Views/AuthAdmin/_Layout.cshtml";
+    ViewData["Title"] = $"{Model.User.Email} · Kinxter Auth Control";
+}
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" href="@Model.ControlPath">
+      <span class="brand-mark">K</span>
+      <span>Kinxter Auth Control</span>
+    </a>
+    <div class="topbar-meta">
+      <span>@Model.Username</span>
+      <form method="post" action="@Model.LogoutPath">
+        <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+        <button class="logout" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+  <main>
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Backoffice administrator</p>
+        <h1>@Model.User.Email</h1>
+        <p class="subtitle">Role or account-state changes revoke all existing refresh tokens and sessions.</p>
+      </div>
+      <a class="button secondary" href="@Model.ControlPath/realms/@Model.User.RealmId/users">Back to users</a>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+      <p class="notice error">@Model.Error</p>
+    }
+    @if (Model.Saved)
+    {
+      <p class="notice success">The account was updated and its existing sessions were revoked.</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.InvitationUrl))
+    {
+      <section class="secret-box">
+        <strong>One-time activation link</strong>
+        <p>Send this link through a trusted channel. It is not stored and will not be displayed again.</p>
+        <code>@Model.InvitationUrl</code>
+      </section>
+    }
+    <section class="panel panel-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Email</label>
+          <input value="@Model.User.Email" readonly>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <input value="@(Model.User.Enabled ? "Enabled" : "Disabled") · @(Model.User.InvitationPending ? "Invitation pending" : Model.User.MfaEnabled ? "MFA enabled" : "MFA pending")" readonly>
+        </div>
+      </div>
+      <form method="post" action="@Model.ControlPath/realms/@Model.User.RealmId/users/@Model.User.UserId">
+        <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+        <div class="section-head">
+          <div>
+            <h2>Roles</h2>
+            <p class="subtitle">Permissions are included in newly issued access tokens.</p>
+          </div>
+        </div>
+        <div class="choice-grid">
+          @foreach (var role in Model.User.AvailableRoles)
+          {
+            <div class="check">
+              @if (Model.SelectedRoles.Contains(role.Name))
+              {
+                <input id="role-@role.Name" name="roles" type="checkbox" value="@role.Name" checked>
+              }
+              else
+              {
+                <input id="role-@role.Name" name="roles" type="checkbox" value="@role.Name">
+              }
+              <label for="role-@role.Name">
+                <strong>@role.DisplayName</strong>
+                <small>@role.Description</small>
+              </label>
+            </div>
+          }
+        </div>
+        <div class="actions">
+          <div class="metadata">
+            <span>Created @Model.User.CreatedAt.ToString("u")</span>
+            <span>Email @(Model.User.EmailConfirmed ? "confirmed" : "unconfirmed")</span>
+          </div>
+          <button class="button" type="submit">Save roles</button>
+        </div>
+      </form>
+    </section>
+    <section class="panel panel-body danger-zone">
+      <div>
+        <h2>Session controls</h2>
+        <p class="subtitle">Use these actions after suspected credential exposure or a staff access change.</p>
+      </div>
+      <div class="inline-actions">
+        @if (Model.User.InvitationPending)
+        {
+          <form method="post" action="@Model.ControlPath/realms/@Model.User.RealmId/users/@Model.User.UserId/renew-invitation">
+            <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+            <button class="button secondary compact" type="submit">New invitation link</button>
+          </form>
+        }
+        <form method="post" action="@Model.ControlPath/realms/@Model.User.RealmId/users/@Model.User.UserId/revoke-sessions">
+          <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+          <button class="button secondary compact" type="submit">Revoke sessions</button>
+        </form>
+        @if (Model.User.MfaEnabled)
+        {
+          <form method="post" action="@Model.ControlPath/realms/@Model.User.RealmId/users/@Model.User.UserId/reset-mfa">
+            <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+            <button class="button secondary compact" type="submit">Reset MFA</button>
+          </form>
+        }
+        <form method="post" action="@Model.ControlPath/realms/@Model.User.RealmId/users/@Model.User.UserId/@(Model.User.Enabled ? "disable" : "enable")">
+          <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+          <button class="button @(Model.User.Enabled ? "danger" : "") compact" type="submit">@(Model.User.Enabled ? "Disable account" : "Enable account")</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>

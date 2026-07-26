@@ -7,13 +7,74 @@ const nonceCookie = "kinxter_admin_auth_nonce";
 const accessTokenCookie = "kinxter_admin_access_token";
 const refreshTokenCookie = "kinxter_admin_refresh_token";
 const idTokenCookie = "kinxter_admin_id_token";
+const refreshTokenLifetimeSeconds = 8 * 3600;
+
+const allowedBackofficeRoles = new Set([
+  "super_admin",
+  "ops",
+  "moderator",
+  "support",
+  "read_only",
+  "admin",
+]);
+
+export type AccessTokenSession = {
+  accessToken: string | null;
+  apply(response: NextResponse): void;
+};
 
 let cachedConfiguration:
   | { key: string; value: Promise<oidc.Configuration> }
   | undefined;
 
-export function getAccessToken(request: NextRequest) {
-  return request.cookies.get(accessTokenCookie)?.value ?? null;
+export async function getAccessToken(
+  request: NextRequest,
+): Promise<AccessTokenSession> {
+  const accessToken = request.cookies.get(accessTokenCookie)?.value;
+
+  if (accessToken) {
+    return { accessToken, apply: () => undefined };
+  }
+
+  const refreshToken = request.cookies.get(refreshTokenCookie)?.value;
+
+  if (!refreshToken) {
+    return { accessToken: null, apply: clearSessionCookies };
+  }
+
+  try {
+    const configuration = await getConfiguration();
+    const tokens = await oidc.refreshTokenGrant(configuration, refreshToken);
+
+    return {
+      accessToken: tokens.access_token,
+      apply(response) {
+        response.cookies.set(
+          accessTokenCookie,
+          tokens.access_token,
+          getSessionCookieOptions(tokens.expires_in ?? 300),
+        );
+
+        if (tokens.refresh_token) {
+          response.cookies.set(
+            refreshTokenCookie,
+            tokens.refresh_token,
+            getSessionCookieOptions(refreshTokenLifetimeSeconds),
+          );
+        }
+
+        if (tokens.id_token) {
+          response.cookies.set(
+            idTokenCookie,
+            tokens.id_token,
+            getSessionCookieOptions(tokens.expires_in ?? 300),
+          );
+        }
+      },
+    };
+  } catch {
+    return { accessToken: null, apply: clearSessionCookies };
+  }
 }
 
 export async function startLogin(request: NextRequest, scopes: string[]) {
@@ -62,6 +123,21 @@ export async function completeLogin(request: NextRequest) {
         idTokenExpected: true,
       },
     );
+    const claims = tokens.claims();
+
+    if (
+      claims?.realm !== "backoffice" ||
+      !hasAllowedBackofficeRole(claims?.role)
+    ) {
+      const response = NextResponse.json(
+        { error: "backoffice_access_denied" },
+        { status: 403 },
+      );
+      clearTransientCookies(response);
+      clearSessionCookies(response);
+      return response;
+    }
+
     const response = NextResponse.redirect(new URL("/", request.nextUrl.origin));
     const sessionOptions = getSessionCookieOptions(tokens.expires_in ?? 3600);
 
@@ -72,7 +148,7 @@ export async function completeLogin(request: NextRequest) {
       response.cookies.set(
         refreshTokenCookie,
         tokens.refresh_token,
-        getSessionCookieOptions(30 * 24 * 3600),
+        getSessionCookieOptions(refreshTokenLifetimeSeconds),
       );
     }
 
@@ -109,9 +185,7 @@ export async function logout(request: NextRequest) {
   );
 
   clearTransientCookies(response);
-  response.cookies.delete(accessTokenCookie);
-  response.cookies.delete(refreshTokenCookie);
-  response.cookies.delete(idTokenCookie);
+  clearSessionCookies(response);
 
   return response;
 }
@@ -192,6 +266,20 @@ function clearTransientCookies(response: NextResponse) {
   response.cookies.delete(stateCookie);
   response.cookies.delete(verifierCookie);
   response.cookies.delete(nonceCookie);
+}
+
+function clearSessionCookies(response: NextResponse) {
+  response.cookies.delete(accessTokenCookie);
+  response.cookies.delete(refreshTokenCookie);
+  response.cookies.delete(idTokenCookie);
+}
+
+function hasAllowedBackofficeRole(value: unknown) {
+  const roles = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+
+  return roles.some(
+    (role) => typeof role === "string" && allowedBackofficeRoles.has(role),
+  );
 }
 
 function useSecureCookies() {

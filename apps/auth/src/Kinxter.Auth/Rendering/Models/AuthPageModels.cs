@@ -126,6 +126,36 @@ internal sealed class AuthRegisterPageViewModel
     public IReadOnlyList<AuthExternalLoginButtonViewModel> ExternalProviders { get; }
 }
 
+internal sealed class AuthActivateInvitationPageViewModel
+{
+    public AuthActivateInvitationPageViewModel(
+        AuthOptions options,
+        string email,
+        string token,
+        string? error,
+        bool completed)
+    {
+        Email = email;
+        Token = token;
+        Error = error;
+        Completed = completed;
+        ActivationPath = AuthPagePaths.AccountPath(options, "/account/activate");
+        LoginPath = AuthPagePaths.AccountPath(options, "/account/login");
+    }
+
+    public string Email { get; }
+
+    public string Token { get; }
+
+    public string? Error { get; }
+
+    public bool Completed { get; }
+
+    public string ActivationPath { get; }
+
+    public string LoginPath { get; }
+}
+
 internal sealed class AuthLoginTwoFactorPageViewModel
 {
     public AuthLoginTwoFactorPageViewModel(string? returnUrl, string? error = null)

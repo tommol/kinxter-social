@@ -83,7 +83,11 @@ internal static partial class OpenIddictEndpoints
             ? null
             : await userManager.FindByIdAsync(subject);
 
-        if (user is null || user.Realm != authOptions.Realm || !await signInManager.CanSignInAsync(user))
+        if (user is null ||
+            user.Realm != authOptions.Realm ||
+            user.DeletedAt is not null ||
+            user.DisabledAt is not null ||
+            !await signInManager.CanSignInAsync(user))
         {
             return Results.Forbid(
                 authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],

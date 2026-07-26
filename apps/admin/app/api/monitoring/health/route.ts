@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAccessToken } from "../../auth/_lib/oauth";
+import {
+  AccessTokenSession,
+  getAccessToken,
+} from "../../auth/_lib/oauth";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,21 +24,23 @@ export async function GET(request: NextRequest) {
   const startedAt = performance.now();
   const apiBaseUrl = getApiBaseUrl();
   const checkedAt = new Date().toISOString();
-  const token = getAccessToken(request);
+  const session = await getAccessToken(request);
 
   try {
     const response = await fetch(`${apiBaseUrl}/api/v1/monitoring/overview`, {
       cache: "no-store",
       headers: {
         accept: "application/json",
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(session.accessToken
+          ? { authorization: `Bearer ${session.accessToken}` }
+          : {}),
       },
     });
     const latencyMs = Math.round(performance.now() - startedAt);
     const payload = await readJson(response);
 
     if (!response.ok) {
-      return NextResponse.json(
+      return jsonWithSession(
         {
           status: "down",
           checkedAt,
@@ -45,13 +50,14 @@ export async function GET(request: NextRequest) {
           error: `API monitoring endpoint returned HTTP ${response.status}.`,
           payload,
         },
-        { status: 503 },
+        503,
+        session,
       );
     }
 
     const overview = normalizeOverview(payload);
 
-    return NextResponse.json(
+    return jsonWithSession(
       {
         status: overview.status,
         checkedAt,
@@ -59,10 +65,11 @@ export async function GET(request: NextRequest) {
         apiBaseUrl,
         overview,
       },
-      { status: overview.status === "ok" ? 200 : 503 },
+      overview.status === "ok" ? 200 : 503,
+      session,
     );
   } catch (error) {
-    return NextResponse.json(
+    return jsonWithSession(
       {
         status: "down",
         checkedAt,
@@ -71,9 +78,20 @@ export async function GET(request: NextRequest) {
         overview: null,
         error: error instanceof Error ? error.message : "API is unavailable.",
       },
-      { status: 503 },
+      503,
+      session,
     );
   }
+}
+
+function jsonWithSession(
+  body: unknown,
+  status: number,
+  session: AccessTokenSession,
+) {
+  const response = NextResponse.json(body, { status });
+  session.apply(response);
+  return response;
 }
 
 function getApiBaseUrl() {

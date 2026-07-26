@@ -21,6 +21,7 @@ internal static class AuthDatabaseExtensions
         await SeedAuthRealmsAsync(services, options);
         await SeedOpenIddictAsync(services, options);
         await SeedAuthAdministratorAsync(services);
+        await SeedBackofficeRolesAsync(services);
 
         foreach (var realmOptions in options.Realms)
         {
@@ -224,11 +225,6 @@ internal static class AuthDatabaseExtensions
         var clock = services.GetRequiredService<IClock>();
         var email = options.SeedAdmin.Email.Trim();
 
-        if (!await roleManager.RoleExistsAsync(AuthRoles.Admin))
-        {
-            await roleManager.CreateAsync(new IdentityRole<Guid>(AuthRoles.Admin));
-        }
-
         var user = await userManager.FindByEmailInRealmAsync(dbContext, options, email);
 
         if (user is null)
@@ -252,9 +248,30 @@ internal static class AuthDatabaseExtensions
             }
         }
 
-        if (!await userManager.IsInRoleAsync(user, AuthRoles.Admin))
+        if (!await userManager.IsInRoleAsync(user, AuthRoles.SuperAdmin))
         {
-            await userManager.AddToRoleAsync(user, AuthRoles.Admin);
+            await userManager.AddToRoleAsync(user, AuthRoles.SuperAdmin);
+        }
+    }
+
+    private static async Task SeedBackofficeRolesAsync(IServiceProvider services)
+    {
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+        foreach (var roleName in AuthRoles.AllNames)
+        {
+            if (await roleManager.RoleExistsAsync(roleName))
+            {
+                continue;
+            }
+
+            var result = await roleManager.CreateAsync(new IdentityRole<Guid>(roleName));
+
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(error => error.Description));
+                throw new InvalidOperationException($"Backoffice role '{roleName}' could not be created: {errors}");
+            }
         }
     }
 
@@ -265,9 +282,4 @@ internal static class AuthDatabaseExtensions
             string.Equals(scope, Scopes.Email, StringComparison.Ordinal) ||
             string.Equals(scope, Scopes.Roles, StringComparison.Ordinal);
     }
-}
-
-internal static class AuthRoles
-{
-    public const string Admin = "admin";
 }

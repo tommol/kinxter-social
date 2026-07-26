@@ -1,0 +1,27 @@
+@model Kinxter.Auth.Rendering.Models.AuthActivateInvitationPageViewModel
+@{
+    Layout = "/Views/Auth/_Layout.cshtml";
+    ViewData["Title"] = Model.Completed ? "Account activated" : "Activate backoffice account";
+}
+@if (Model.Completed)
+{
+  <h1>Account activated</h1>
+  <p>Your password has been set. Sign in to configure the required multi-factor authentication.</p>
+  <p><a href="@Model.LoginPath">Continue to sign in</a></p>
+}
+else
+{
+  <h1>Activate backoffice account</h1>
+  <p>Set a password for <strong>@Model.Email</strong>. MFA setup will be required during your first sign-in.</p>
+  @if (!string.IsNullOrWhiteSpace(Model.Error))
+  {
+    <p class="error">@Model.Error</p>
+  }
+  <form method="post" action="@Model.ActivationPath">
+    <input type="hidden" name="email" value="@Model.Email">
+    <input type="hidden" name="token" value="@Model.Token">
+    <label>Password <input type="password" name="password" autocomplete="new-password" required></label>
+    <label>Confirm password <input type="password" name="confirmPassword" autocomplete="new-password" required></label>
+    <button type="submit">Activate account</button>
+  </form>
+}

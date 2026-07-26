@@ -35,9 +35,31 @@ internal static class ApiAuthenticationExtensions
             })
             .AddPolicy(ApiAuthorizationPolicies.BackofficeAdmin, policy =>
             {
-                policy.AddAuthenticationSchemes(ApiAuthenticationSchemes.BackofficeRealm);
-                policy.RequireAuthenticatedUser();
-                policy.RequireAssertion(context => HasScope(context, "kinxter.admin") && HasRealm(context, options.BackofficeRealm));
+                ConfigureBackofficePolicy(policy, options, ApiPermissions.AdminAccess);
+            })
+            .AddPolicy(ApiAuthorizationPolicies.MonitoringRead, policy =>
+            {
+                ConfigureBackofficePolicy(policy, options, ApiPermissions.MonitoringRead);
+            })
+            .AddPolicy(ApiAuthorizationPolicies.ModerationRead, policy =>
+            {
+                ConfigureBackofficePolicy(policy, options, ApiPermissions.ModerationRead);
+            })
+            .AddPolicy(ApiAuthorizationPolicies.ModerationWrite, policy =>
+            {
+                ConfigureBackofficePolicy(policy, options, ApiPermissions.ModerationWrite);
+            })
+            .AddPolicy(ApiAuthorizationPolicies.UsersRead, policy =>
+            {
+                ConfigureBackofficePolicy(policy, options, ApiPermissions.UsersRead);
+            })
+            .AddPolicy(ApiAuthorizationPolicies.UsersManage, policy =>
+            {
+                ConfigureBackofficePolicy(policy, options, ApiPermissions.UsersManage);
+            })
+            .AddPolicy(ApiAuthorizationPolicies.AdminUsersManage, policy =>
+            {
+                ConfigureBackofficePolicy(policy, options, ApiPermissions.AdminUsersManage);
             });
 
         return services;
@@ -79,5 +101,18 @@ internal static class ApiAuthenticationExtensions
         return context.User.Claims.Any(claim =>
             claim.Type == "realm" &&
             string.Equals(claim.Value, realm, StringComparison.Ordinal));
+    }
+
+    private static void ConfigureBackofficePolicy(
+        AuthorizationPolicyBuilder policy,
+        ApiAuthenticationOptions options,
+        string permission)
+    {
+        policy.AddAuthenticationSchemes(ApiAuthenticationSchemes.BackofficeRealm);
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context =>
+            HasScope(context, "kinxter.admin") &&
+            HasRealm(context, options.BackofficeRealm) &&
+            context.User.HasClaim("permission", permission));
     }
 }

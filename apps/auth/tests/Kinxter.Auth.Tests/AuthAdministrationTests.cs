@@ -1,6 +1,7 @@
 using Kinxter.Auth.Administration;
 using Kinxter.Auth.Infrastructure.Persistence;
 using Kinxter.Shared.Abstractions.Time;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,23 @@ namespace Kinxter.Auth.Tests;
 
 public sealed class AuthAdministrationTests
 {
+    [Fact]
+    public void Backoffice_roles_resolve_to_least_privilege_permissions()
+    {
+        var operations = AuthRoles.GetPermissions([AuthRoles.Operations]);
+        var support = AuthRoles.GetPermissions([AuthRoles.Support]);
+        var superAdmin = AuthRoles.GetPermissions([AuthRoles.SuperAdmin]);
+        var legacyAdmin = AuthRoles.GetPermissions([AuthRoles.LegacyAdmin]);
+
+        Assert.Contains(AuthPermissions.AdminAccess, operations);
+        Assert.Contains(AuthPermissions.MonitoringRead, operations);
+        Assert.DoesNotContain(AuthPermissions.AdminUsersManage, operations);
+        Assert.Contains(AuthPermissions.UsersManage, support);
+        Assert.DoesNotContain(AuthPermissions.MonitoringRead, support);
+        Assert.Equal(AuthPermissions.All.Order(), superAdmin.Order());
+        Assert.Equal(AuthPermissions.All.Order(), legacyAdmin.Order());
+    }
+
     [Fact]
     public void AuthAdminOptions_reads_independent_control_plane_configuration()
     {
@@ -459,6 +477,92 @@ public sealed class AuthAdministrationTests
 
         Assert.False(rotation.Success);
         Assert.Contains("Public clients", rotation.Error);
+    }
+
+    [Fact]
+    public async Task Backoffice_user_management_invites_assigns_roles_and_revokes_access_on_change()
+    {
+        var services = new ServiceCollection();
+        var now = new DateTimeOffset(2026, 7, 26, 13, 0, 0, TimeSpan.Zero);
+        services.AddLogging();
+        services.AddDbContext<AuthDbContext>(options =>
+        {
+            options.UseInMemoryDatabase(Guid.NewGuid().ToString("D"));
+            options.UseOpenIddict();
+        });
+        services.AddOpenIddict()
+            .AddCore(options => options.UseEntityFrameworkCore().UseDbContext<AuthDbContext>());
+        services
+            .AddIdentity<AuthUser, IdentityRole<Guid>>()
+            .AddEntityFrameworkStores<AuthDbContext>()
+            .AddDefaultTokenProviders();
+        services.AddSingleton<IClock>(new TestClock(now));
+        services.AddScoped<BackofficeUserAdministrationService>();
+
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        dbContext.Database.EnsureCreated();
+        var realm = new AuthRealm
+        {
+            Id = Guid.CreateVersion7(now),
+            Name = AuthRealmNames.Backoffice,
+            Issuer = "https://auth.example/realms/backoffice",
+            PathBase = "/realms/backoffice",
+            MfaPolicy = AuthMfaPolicy.Required,
+            SignupEnabled = false,
+            CreatedAt = now
+        };
+        dbContext.AuthRealms.Add(realm);
+        await dbContext.SaveChangesAsync();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+        foreach (var roleName in AuthRoles.AllNames)
+        {
+            var roleResult = await roleManager.CreateAsync(new IdentityRole<Guid>(roleName));
+            Assert.True(roleResult.Succeeded);
+        }
+
+        var service = scope.ServiceProvider.GetRequiredService<BackofficeUserAdministrationService>();
+        var invitation = await service.InviteAsync(
+            realm.Id,
+            new AuthAdminInviteUserCommand("operator@example.com", [AuthRoles.Operations]));
+
+        Assert.True(invitation.Success, invitation.Error);
+        Assert.NotNull(invitation.User);
+        Assert.Contains("/realms/backoffice/account/activate", invitation.InvitationUrl);
+        Assert.Equal([AuthRoles.Operations], invitation.User!.Roles);
+        Assert.True(invitation.User.InvitationPending);
+
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AuthUser>>();
+        var user = await userManager.FindByIdAsync(invitation.User.UserId.ToString("D"));
+        Assert.NotNull(user);
+        Assert.False(await userManager.HasPasswordAsync(user!));
+        var originalSecurityStamp = user!.SecurityStamp;
+        var tokenManager = scope.ServiceProvider.GetRequiredService<IOpenIddictTokenManager>();
+        var refreshToken = await tokenManager.CreateAsync(new OpenIddictTokenDescriptor
+        {
+            Subject = user.Id.ToString("D"),
+            Status = OpenIddictConstants.Statuses.Valid,
+            Type = OpenIddictConstants.TokenTypeHints.RefreshToken
+        });
+
+        var rolesChanged = await service.UpdateRolesAsync(
+            realm.Id,
+            user.Id,
+            [AuthRoles.Support]);
+
+        Assert.True(rolesChanged.Success, rolesChanged.Error);
+        Assert.Equal([AuthRoles.Support], await userManager.GetRolesAsync(user));
+        Assert.True(await tokenManager.HasStatusAsync(refreshToken, OpenIddictConstants.Statuses.Revoked));
+        user = await userManager.FindByIdAsync(user.Id.ToString("D"));
+        Assert.NotEqual(originalSecurityStamp, user!.SecurityStamp);
+
+        var disabled = await service.SetEnabledAsync(realm.Id, user.Id, enabled: false);
+
+        Assert.True(disabled.Success, disabled.Error);
+        user = await userManager.FindByIdAsync(user.Id.ToString("D"));
+        Assert.Equal(now, user!.DisabledAt);
     }
 
     private static AuthDbContext CreateDbContext()

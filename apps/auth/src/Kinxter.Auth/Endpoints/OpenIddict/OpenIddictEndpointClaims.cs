@@ -22,6 +22,7 @@ internal static partial class OpenIddictEndpoints
             nameType: Claims.Name,
             roleType: Claims.Role);
         var roles = await userManager.GetRolesAsync(user);
+        var permissions = AuthRoles.GetPermissions(roles);
 
         identity.SetClaim(Claims.Subject, await userManager.GetUserIdAsync(user))
             .SetClaim(Claims.Email, await userManager.GetEmailAsync(user))
@@ -29,7 +30,8 @@ internal static partial class OpenIddictEndpoints
             .SetClaim(Claims.PreferredUsername, await userManager.GetUserNameAsync(user))
             .SetClaim("realm", authOptions.Realm)
             .SetClaim("email_verified", user.EmailConfirmed ? "true" : "false")
-            .SetClaims(Claims.Role, roles.ToImmutableArray());
+            .SetClaims(Claims.Role, roles.ToImmutableArray())
+            .SetClaims(AuthClaimTypes.Permission, permissions.ToImmutableArray());
 
         var principal = new ClaimsPrincipal(identity);
         var requestedScopes = scopes.ToImmutableArray();
@@ -37,6 +39,12 @@ internal static partial class OpenIddictEndpoints
         principal.SetScopes(requestedScopes);
         principal.SetResources(await scopeManager.ListResourcesAsync(requestedScopes).ToListAsync());
         principal.SetDestinations(GetDestinations);
+
+        if (string.Equals(authOptions.Realm, AuthRealmNames.Backoffice, StringComparison.Ordinal))
+        {
+            principal.SetAccessTokenLifetime(TimeSpan.FromMinutes(5));
+            principal.SetRefreshTokenLifetime(TimeSpan.FromHours(8));
+        }
 
         return principal;
     }

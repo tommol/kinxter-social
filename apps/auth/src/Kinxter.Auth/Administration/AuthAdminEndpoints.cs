@@ -45,6 +45,26 @@ internal static class AuthAdminEndpoints
             .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
         group.MapPost("/realms/{realmId:guid}/clients/{clientId:guid}/rotate-secret", RotateClientSecretAsync)
             .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapGet("/realms/{realmId:guid}/users", GetBackofficeUsersAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapGet("/realms/{realmId:guid}/users/new", GetInviteBackofficeUserAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapPost("/realms/{realmId:guid}/users", InviteBackofficeUserAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapGet("/realms/{realmId:guid}/users/{userId:guid}", GetBackofficeUserAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapPost("/realms/{realmId:guid}/users/{userId:guid}", UpdateBackofficeUserRolesAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapPost("/realms/{realmId:guid}/users/{userId:guid}/disable", DisableBackofficeUserAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapPost("/realms/{realmId:guid}/users/{userId:guid}/enable", EnableBackofficeUserAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapPost("/realms/{realmId:guid}/users/{userId:guid}/revoke-sessions", RevokeBackofficeUserSessionsAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapPost("/realms/{realmId:guid}/users/{userId:guid}/reset-mfa", ResetBackofficeUserMfaAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
+        group.MapPost("/realms/{realmId:guid}/users/{userId:guid}/renew-invitation", RenewBackofficeUserInvitationAsync)
+            .RequireAuthorization(AuthAdminDefaults.AuthorizationPolicy);
 
         return app;
     }
@@ -489,6 +509,364 @@ internal static class AuthAdminEndpoints
             client,
             error: result.Error,
             clientSecret: result.ClientSecret);
+    }
+
+    private static async Task<IResult> GetBackofficeUsersAsync(
+        Guid realmId,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        CancellationToken cancellationToken)
+    {
+        var backoffice = await userAdministration.GetUsersAsync(realmId, cancellationToken);
+
+        return backoffice is null
+            ? Results.NotFound()
+            : await renderer.BackofficeUsersAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                backoffice);
+    }
+
+    private static async Task<IResult> GetInviteBackofficeUserAsync(
+        Guid realmId,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        CancellationToken cancellationToken)
+    {
+        var backoffice = await userAdministration.GetUsersAsync(realmId, cancellationToken);
+
+        return backoffice is null
+            ? Results.NotFound()
+            : await renderer.InviteUserAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                realmId);
+    }
+
+    private static async Task<IResult> InviteBackofficeUserAsync(
+        Guid realmId,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        if (!await IsAntiforgeryValidAsync(context, antiforgery))
+        {
+            return Results.BadRequest();
+        }
+
+        var form = await context.Request.ReadFormAsync(cancellationToken);
+        var command = new AuthAdminInviteUserCommand(
+            form["email"].ToString(),
+            GetFormValues(form, "roles"));
+        var result = await userAdministration.InviteAsync(realmId, command, cancellationToken);
+
+        if (result.UserNotFound)
+        {
+            return Results.NotFound();
+        }
+
+        return result.Success && result.User is not null
+            ? await renderer.BackofficeUserAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                result.User,
+                invitationUrl: result.InvitationUrl)
+            : await renderer.InviteUserAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                realmId,
+                command.Email,
+                command.Roles,
+                result.Error);
+    }
+
+    private static async Task<IResult> GetBackofficeUserAsync(
+        Guid realmId,
+        Guid userId,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        CancellationToken cancellationToken,
+        bool saved = false)
+    {
+        var user = await userAdministration.GetUserAsync(realmId, userId, cancellationToken);
+
+        return user is null
+            ? Results.NotFound()
+            : await renderer.BackofficeUserAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                user,
+                saved: saved);
+    }
+
+    private static async Task<IResult> UpdateBackofficeUserRolesAsync(
+        Guid realmId,
+        Guid userId,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        if (!await IsAntiforgeryValidAsync(context, antiforgery))
+        {
+            return Results.BadRequest();
+        }
+
+        var form = await context.Request.ReadFormAsync(cancellationToken);
+        var roles = GetFormValues(form, "roles");
+        var result = await userAdministration.UpdateRolesAsync(
+            realmId,
+            userId,
+            roles,
+            cancellationToken);
+
+        if (result.UserNotFound)
+        {
+            return Results.NotFound();
+        }
+
+        if (result.Success)
+        {
+            return Results.Redirect(
+                $"{options.PathBase}/realms/{realmId:D}/users/{userId:D}?saved=true");
+        }
+
+        var user = await userAdministration.GetUserAsync(realmId, userId, cancellationToken);
+
+        return user is null
+            ? Results.NotFound()
+            : await renderer.BackofficeUserAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                user,
+                roles,
+                error: result.Error);
+    }
+
+    private static Task<IResult> DisableBackofficeUserAsync(
+        Guid realmId,
+        Guid userId,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken) =>
+        SetBackofficeUserEnabledAsync(
+            realmId,
+            userId,
+            enabled: false,
+            context,
+            userAdministration,
+            options,
+            renderer,
+            antiforgery,
+            cancellationToken);
+
+    private static Task<IResult> EnableBackofficeUserAsync(
+        Guid realmId,
+        Guid userId,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken) =>
+        SetBackofficeUserEnabledAsync(
+            realmId,
+            userId,
+            enabled: true,
+            context,
+            userAdministration,
+            options,
+            renderer,
+            antiforgery,
+            cancellationToken);
+
+    private static async Task<IResult> SetBackofficeUserEnabledAsync(
+        Guid realmId,
+        Guid userId,
+        bool enabled,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        if (!await IsAntiforgeryValidAsync(context, antiforgery))
+        {
+            return Results.BadRequest();
+        }
+
+        var result = await userAdministration.SetEnabledAsync(
+            realmId,
+            userId,
+            enabled,
+            cancellationToken);
+
+        return await FinishUserActionAsync(
+            realmId,
+            userId,
+            result,
+            context,
+            userAdministration,
+            options,
+            renderer,
+            cancellationToken);
+    }
+
+    private static async Task<IResult> RevokeBackofficeUserSessionsAsync(
+        Guid realmId,
+        Guid userId,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        if (!await IsAntiforgeryValidAsync(context, antiforgery))
+        {
+            return Results.BadRequest();
+        }
+
+        var result = await userAdministration.RevokeSessionsAsync(
+            realmId,
+            userId,
+            cancellationToken);
+
+        return await FinishUserActionAsync(
+            realmId,
+            userId,
+            result,
+            context,
+            userAdministration,
+            options,
+            renderer,
+            cancellationToken);
+    }
+
+    private static async Task<IResult> ResetBackofficeUserMfaAsync(
+        Guid realmId,
+        Guid userId,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        if (!await IsAntiforgeryValidAsync(context, antiforgery))
+        {
+            return Results.BadRequest();
+        }
+
+        var result = await userAdministration.ResetMfaAsync(
+            realmId,
+            userId,
+            cancellationToken);
+
+        return await FinishUserActionAsync(
+            realmId,
+            userId,
+            result,
+            context,
+            userAdministration,
+            options,
+            renderer,
+            cancellationToken);
+    }
+
+    private static async Task<IResult> RenewBackofficeUserInvitationAsync(
+        Guid realmId,
+        Guid userId,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        if (!await IsAntiforgeryValidAsync(context, antiforgery))
+        {
+            return Results.BadRequest();
+        }
+
+        var result = await userAdministration.RenewInvitationAsync(
+            realmId,
+            userId,
+            cancellationToken);
+
+        if (result.UserNotFound)
+        {
+            return Results.NotFound();
+        }
+
+        var user = result.User ?? await userAdministration.GetUserAsync(
+            realmId,
+            userId,
+            cancellationToken);
+
+        return user is null
+            ? Results.NotFound()
+            : await renderer.BackofficeUserAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                user,
+                invitationUrl: result.InvitationUrl,
+                error: result.Error);
+    }
+
+    private static async Task<IResult> FinishUserActionAsync(
+        Guid realmId,
+        Guid userId,
+        AuthAdminUserActionResult result,
+        HttpContext context,
+        BackofficeUserAdministrationService userAdministration,
+        AuthAdminOptions options,
+        AuthAdminPageRenderer renderer,
+        CancellationToken cancellationToken)
+    {
+        if (result.UserNotFound)
+        {
+            return Results.NotFound();
+        }
+
+        if (result.Success)
+        {
+            return Results.Redirect(
+                $"{options.PathBase}/realms/{realmId:D}/users/{userId:D}?saved=true");
+        }
+
+        var user = await userAdministration.GetUserAsync(realmId, userId, cancellationToken);
+
+        return user is null
+            ? Results.NotFound()
+            : await renderer.BackofficeUserAsync(
+                context,
+                options,
+                GetAdministratorName(context.User),
+                user,
+                error: result.Error);
     }
 
     private static string[] SplitLines(string value)

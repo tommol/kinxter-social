@@ -26,8 +26,35 @@ AUTH_ADMIN_BOOTSTRAP_PASSWORD=replace-with-a-unique-secret
 ```
 
 The panel manages persisted realm routing, MFA policy, signup availability,
-and OAuth 2.0/OpenID Connect clients. Realm and client changes are applied to
-the running auth service immediately and remain active after a restart.
+OAuth 2.0/OpenID Connect clients, and users of the `backoffice` realm. Realm
+and client changes are applied to the running auth service immediately and
+remain active after a restart.
+
+### Backoffice users
+
+Admin application users are regular identity users isolated in the
+`backoffice` realm. They are separate from the `AuthAdministrator` accounts
+that protect `/control`. Public signup remains disabled for this realm.
+
+Use the backoffice realm page in `/control` to invite a user, copy the one-time
+activation link, and assign one or more least-privilege roles:
+
+- `super_admin`: full backoffice access and administrator management
+- `ops`: monitoring and operational diagnostics
+- `moderator`: content and community moderation
+- `support`: user support and account management
+- `read_only`: read-only monitoring, moderation, and user access
+
+The legacy `admin` role remains recognized for existing deployments, but it is
+not offered for new assignments. Roles are translated into `permission`
+claims in access tokens. API endpoints authorize permissions in addition to
+the `backoffice` realm and `kinxter.admin` scope.
+
+Changing roles, disabling an account, resetting MFA, or manually revoking
+sessions rotates the ASP.NET Identity security stamp and revokes all stored
+OpenIddict tokens and authorizations for that user. Backoffice access tokens
+live for five minutes and refresh tokens for eight hours; a disabled or deleted
+user cannot use a refresh token to obtain a new access token.
 
 ## OIDC clients
 

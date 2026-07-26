@@ -19,6 +19,8 @@ internal static partial class AccountEndpoints
         group.MapGet("/confirm-email", ConfirmEmailAsync);
         group.MapPost("/forgot-password", ForgotPasswordAsync);
         group.MapPost("/reset-password", ResetPasswordAsync);
+        group.MapGet("/activate", GetActivateInvitationAsync);
+        group.MapPost("/activate", ActivateInvitationAsync);
 
         group.MapGet("/manage/totp", TotpSetupAsync).RequireAuthorization();
         group.MapPost("/manage/totp", EnableTotpAsync).RequireAuthorization();

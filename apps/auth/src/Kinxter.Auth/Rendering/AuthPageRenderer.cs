@@ -61,6 +61,20 @@ internal sealed class AuthPageRenderer
         return RenderResultAsync(context, "/Views/Auth/Register.cshtml", new AuthRegisterPageViewModel(options, returnUrl, error));
     }
 
+    public Task<IResult> ActivateInvitationAsync(
+        HttpContext context,
+        AuthOptions options,
+        string email,
+        string token,
+        string? error = null,
+        bool completed = false)
+    {
+        return RenderResultAsync(
+            context,
+            "/Views/Auth/ActivateInvitation.cshtml",
+            new AuthActivateInvitationPageViewModel(options, email, token, error, completed));
+    }
+
     public Task<IResult> LoginTwoFactorAsync(
         HttpContext context,
         string? returnUrl,

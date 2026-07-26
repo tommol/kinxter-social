@@ -94,6 +94,79 @@ internal sealed class AuthAdminPageRenderer
             error is null ? StatusCodes.Status200OK : StatusCodes.Status400BadRequest);
     }
 
+    public Task<IResult> BackofficeUsersAsync(
+        HttpContext context,
+        AuthAdminOptions options,
+        string username,
+        AuthAdminBackofficeUsers backoffice)
+    {
+        var model = new AuthAdminBackofficeUsersPageViewModel(
+            username,
+            options.PathBase,
+            $"{options.PathBase}/logout",
+            GetAntiforgeryToken(context),
+            backoffice);
+
+        return RenderResultAsync(
+            context,
+            "/Views/AuthAdmin/BackofficeUsers.cshtml",
+            model);
+    }
+
+    public Task<IResult> InviteUserAsync(
+        HttpContext context,
+        AuthAdminOptions options,
+        string username,
+        Guid realmId,
+        string email = "",
+        IReadOnlyCollection<string>? selectedRoles = null,
+        string? error = null)
+    {
+        var model = new AuthAdminInviteUserPageViewModel(
+            username,
+            options.PathBase,
+            $"{options.PathBase}/logout",
+            GetAntiforgeryToken(context),
+            realmId,
+            email,
+            selectedRoles ?? [AuthRoles.ReadOnly],
+            error);
+
+        return RenderResultAsync(
+            context,
+            "/Views/AuthAdmin/InviteUser.cshtml",
+            model,
+            error is null ? StatusCodes.Status200OK : StatusCodes.Status400BadRequest);
+    }
+
+    public Task<IResult> BackofficeUserAsync(
+        HttpContext context,
+        AuthAdminOptions options,
+        string username,
+        AuthAdminBackofficeUserDetails user,
+        IReadOnlyCollection<string>? attemptedRoles = null,
+        string? invitationUrl = null,
+        string? error = null,
+        bool saved = false)
+    {
+        var model = new AuthAdminBackofficeUserPageViewModel(
+            username,
+            options.PathBase,
+            $"{options.PathBase}/logout",
+            GetAntiforgeryToken(context),
+            user,
+            attemptedRoles,
+            invitationUrl,
+            error,
+            saved);
+
+        return RenderResultAsync(
+            context,
+            "/Views/AuthAdmin/BackofficeUser.cshtml",
+            model,
+            error is null ? StatusCodes.Status200OK : StatusCodes.Status400BadRequest);
+    }
+
     public Task<IResult> ClientAsync(
         HttpContext context,
         AuthAdminOptions options,
