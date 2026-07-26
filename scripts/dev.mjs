@@ -22,6 +22,7 @@ const colors = {
   auth: "\u001b[36m",
   api: "\u001b[32m",
   web: "\u001b[35m",
+  admin: "\u001b[33m",
   reset: "\u001b[0m",
 };
 
@@ -75,6 +76,23 @@ const services = [
         process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080",
     },
   },
+  {
+    name: "admin",
+    script: "admin:dev",
+    environment: {
+      AUTH_ISSUER:
+        process.env.ADMIN_AUTH_ISSUER ??
+        "http://localhost:8081/realms/backoffice",
+      AUTH_CLIENT_ID:
+        process.env.ADMIN_AUTH_CLIENT_ID ?? "kinxter-admin",
+      AUTH_CLIENT_SECRET:
+        process.env.ADMIN_AUTH_CLIENT_SECRET ?? "kinxter-admin-dev-secret",
+      AUTH_SECRET:
+        process.env.ADMIN_AUTH_SECRET ?? "kinxter-admin-dev-auth-secret",
+      ADMIN_API_BASE_URL:
+        process.env.ADMIN_API_BASE_URL ?? "http://localhost:8080",
+    },
+  },
 ];
 
 try {
@@ -100,6 +118,7 @@ console.log(
   [
     "Starting local development:",
     "  web  http://localhost:3000",
+    "  admin http://localhost:3001",
     "  API  http://localhost:8080",
     "  auth http://localhost:8081/realms/public",
     "  auth control http://localhost:8081/control",
