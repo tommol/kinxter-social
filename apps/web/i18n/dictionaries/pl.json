@@ -1,0 +1,146 @@
+{
+  "home": {
+    "metadata": {
+      "title": "Kinxter — społeczność bez oceniania",
+      "description": "Prywatna platforma społecznościowa dla pełnoletnich osób ze społeczności kink i fetysz."
+    },
+    "header": {
+      "brandAriaLabel": "Kinxter — strona główna",
+      "navigationAriaLabel": "Główna nawigacja",
+      "discover": "Odkrywaj",
+      "communities": "Społeczności",
+      "safety": "Bezpieczeństwo",
+      "login": "Zaloguj się",
+      "join": "Dołącz teraz"
+    },
+    "hero": {
+      "eyebrow": "Przestrzeń dla dorosłych 18+",
+      "title": "Znajdź ludzi, przy których możesz być sobą.",
+      "summary": "Dyskretna przestrzeń do poznawania ludzi, odkrywania siebie i budowania społeczności bez oceniania.",
+      "join": "Dołącz dyskretnie",
+      "safety": "Jak dbamy o bezpieczeństwo"
+    },
+    "trust": {
+      "ariaLabel": "Najważniejsze zasady Kinxter",
+      "privacy": "Prywatność od początku",
+      "consent": "Zgoda i granice",
+      "moderation": "Moderowana społeczność"
+    },
+    "join": {
+      "eyebrow": "Zacznij we własnym tempie",
+      "title": "Od ciekawości do społeczności.",
+      "summary": "Nie musisz wiedzieć wszystkiego na początku. Możesz obserwować, poznawać ludzi i odkrywać Kinxter po swojemu.",
+      "createAccount": "Utwórz konto",
+      "steps": [
+        {
+          "number": "1",
+          "title": "Utwórz profil",
+          "description": "Udostępnij tylko tyle, ile chcesz."
+        },
+        {
+          "number": "2",
+          "title": "Odkrywaj",
+          "description": "Znajduj ludzi i społeczności we własnym tempie."
+        },
+        {
+          "number": "3",
+          "title": "Buduj relacje",
+          "description": "Rozmawiaj w przestrzeni opartej na zgodzie."
+        }
+      ],
+      "categoryIntro": "Odkrywaj między innymi",
+      "categoriesAriaLabel": "Przykładowe społeczności",
+      "categories": [
+        "BDSM",
+        "Shibari",
+        "Fetysz",
+        "Queer",
+        "Edukacja",
+        "Wydarzenia"
+      ]
+    },
+    "safety": {
+      "eyebrow": "Bezpieczeństwo w centrum",
+      "title": "Technologia powinna chronić Twoje granice.",
+      "summary": "Prywatność, świadoma zgoda i skuteczna moderacja wpływają na każdą decyzję projektową w Kinxter.",
+      "items": [
+        {
+          "number": "01",
+          "title": "Prywatność od początku",
+          "description": "Ty decydujesz, co pokazujesz i komu. Widoczność profilu pozostaje pod Twoją kontrolą."
+        },
+        {
+          "number": "02",
+          "title": "Zgoda i granice",
+          "description": "Jasne zasady kontaktu wspierają relacje oparte na komunikacji, szacunku i świadomej zgodzie."
+        },
+        {
+          "number": "03",
+          "title": "Aktywna moderacja",
+          "description": "Zgłoszenia i blokowanie pomagają chronić bezpieczną przestrzeń dla każdej osoby 18+."
+        }
+      ],
+      "statement": "Bez presji. Bez oceniania. Z pełną kontrolą nad własną obecnością."
+    },
+    "panelNavigation": {
+      "ariaLabel": "Nawigacja między sekcjami",
+      "previous": "Poprzednia sekcja",
+      "next": "Następna sekcja"
+    },
+    "footer": {
+      "description": "Prywatna platforma społecznościowa dla pełnoletnich osób ze społeczności kink i fetysz.",
+      "values": "18+ · Szacunek · Zgoda · Prywatność",
+      "kinxterAriaLabel": "Kinxter",
+      "kinxterTitle": "Kinxter",
+      "about": "O platformie",
+      "communities": "Społeczności",
+      "safety": "Bezpieczeństwo",
+      "contact": "Kontakt",
+      "documentsAriaLabel": "Dokumenty prawne",
+      "documentsTitle": "Dokumenty",
+      "privacy": "Polityka prywatności",
+      "terms": "Warunki korzystania",
+      "cookies": "Polityka cookies",
+      "communityRules": "Zasady społeczności",
+      "language": "Język",
+      "polish": "Polski",
+      "english": "English",
+      "german": "Deutsch",
+      "soon": "wkrótce",
+      "adultsOnly": "Platforma wyłącznie dla osób pełnoletnich."
+    }
+  },
+  "legal": {
+    "metadata": {
+      "title": "Dokumenty i zasady Kinxter",
+      "description": "Polityka prywatności, warunki korzystania, polityka cookies i zasady społeczności Kinxter."
+    },
+    "backHome": "Powrót na stronę główną",
+    "eyebrow": "Centrum dokumentów",
+    "title": "Dokumenty i zasady Kinxter",
+    "introduction": "Ta strona przygotowuje strukturę pod finalne dokumenty. Treści prawne wymagają jeszcze uzupełnienia i zatwierdzenia przed uruchomieniem platformy.",
+    "status": "Dokument w przygotowaniu",
+    "documents": [
+      {
+        "id": "privacy",
+        "title": "Polityka prywatności",
+        "description": "Dokument opisze zakres przetwarzanych danych, podstawy prawne, okresy przechowywania oraz prawa użytkowników."
+      },
+      {
+        "id": "terms",
+        "title": "Warunki korzystania",
+        "description": "Dokument określi zasady korzystania z Kinxter, wymagania wiekowe, odpowiedzialność użytkowników i reguły konta."
+      },
+      {
+        "id": "cookies",
+        "title": "Polityka cookies",
+        "description": "Dokument wyjaśni, które pliki cookies są niezbędne oraz w jaki sposób będą obsługiwane opcjonalne zgody."
+      },
+      {
+        "id": "community",
+        "title": "Zasady społeczności",
+        "description": "Dokument opisze standardy świadomej zgody, prywatności, moderacji, zgłoszeń oraz treści niedozwolonych."
+      }
+    ]
+  }
+}

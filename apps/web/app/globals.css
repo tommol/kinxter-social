@@ -265,29 +265,7 @@ h1 {
 }
 .heroActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 13px; margin-top: 26px; }
 
-.communityPreview {
-  position: absolute;
-  right: 0;
-  bottom: 6px;
-  width: 360px;
-  padding: 20px;
-  border: 1px solid rgb(255 206 172 / 27%);
-  border-radius: 23px;
-  background: linear-gradient(155deg, rgb(80 9 7 / 78%), rgb(88 0 24 / 90%));
-  box-shadow: 0 30px 70px rgb(73 0 0 / 28%);
-  color: var(--white);
-  backdrop-filter: blur(20px);
-}
-.previewHeader { display: flex; gap: 11px; align-items: center; }
-.previewIcon {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  border-radius: 12px;
-  background: rgb(255 255 255 / 10%);
-}
-.previewIcon svg, .trustBar svg, .cardIcon svg {
+.trustBar svg, .cardIcon svg {
   width: 23px;
   fill: none;
   stroke: currentColor;
@@ -295,46 +273,6 @@ h1 {
   stroke-linejoin: round;
   stroke-width: 1.7;
 }
-.previewHeader p { margin-bottom: 2px; font-size: 1rem; font-weight: 700; }
-.previewHeader span:not(.previewIcon) { color: rgb(255 255 255 / 62%); font-size: 0.72rem; }
-.categoryChips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 16px 0; }
-.categoryChips span {
-  padding: 8px 5px;
-  border: 1px solid rgb(255 111 31 / 72%);
-  border-radius: 999px;
-  color: rgb(255 255 255 / 88%);
-  font-size: 0.69rem;
-  text-align: center;
-}
-.previewTiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
-.previewTile { aspect-ratio: 1; border-radius: 12px; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%); }
-.tileLeather {
-  background: linear-gradient(45deg, transparent 47%, rgb(255 255 255 / 14%) 49%, transparent 51%), linear-gradient(-45deg, transparent 47%, rgb(255 255 255 / 12%) 49%, transparent 51%), radial-gradient(circle, #3b1c18, #100808);
-  background-size: 30px 30px;
-}
-.tileRope { background: repeating-linear-gradient(130deg, transparent 0 5px, rgb(25 3 0 / 78%) 6px 10px), linear-gradient(135deg, #d83316, #5d0014); }
-.tileLight { background: repeating-linear-gradient(105deg, transparent 0 14px, rgb(255 166 77 / 50%) 16px 22px), linear-gradient(140deg, #130807, #a9180e); }
-.tileLacquer { background: linear-gradient(125deg, transparent 30%, rgb(255 169 128 / 65%) 34%, transparent 38%), linear-gradient(145deg, #2b0508, #c20728 58%, #230206); }
-.previewFooter { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
-.avatarStack { display: flex; align-items: center; }
-.avatarStack span {
-  display: grid;
-  width: 31px;
-  height: 31px;
-  margin-right: -7px;
-  place-items: center;
-  border: 2px solid #76101a;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #ff8840, #8f1022);
-  color: #fff;
-  font-size: 0.51rem;
-  font-weight: 800;
-}
-.avatarStack span:nth-child(2) { background: linear-gradient(145deg, #4a2520, #e56d36); }
-.avatarStack span:nth-child(3) { background: linear-gradient(145deg, #be4d28, #3d1219); }
-.avatarStack span:last-child { width: auto; min-width: 44px; padding-inline: 7px; background: #9e2519; }
-.onlineLabel { color: rgb(255 255 255 / 65%); font-size: 0.68rem; }
-.onlineLabel i { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #9ee078; box-shadow: 0 0 10px #9ee078; }
 
 .trustBar {
   position: relative;
@@ -564,7 +502,6 @@ h1 {
   .mainNav { display: none; }
   .heroStage { display: flex; flex-direction: column; align-items: center; }
   .heroCopy { padding-top: 12px; }
-  .communityPreview { position: relative; right: auto; bottom: auto; width: min(100%, 390px); margin-top: 34px; }
   .trustBar { margin-top: 22px; }
   .joinContent { grid-template-columns: minmax(0, 0.9fr) minmax(390px, 1.1fr); gap: 44px; }
   .footerTop { grid-template-columns: 1.4fr repeat(2, 1fr); }
@@ -577,8 +514,6 @@ h1 {
   .heroCopy { padding-top: 4px; }
   h1 { margin-block: 14px; font-size: clamp(3.4rem, 5.6vw, 5.6rem); }
   .heroActions { margin-top: 18px; }
-  .communityPreview { width: 330px; padding: 16px; }
-  .previewTiles { display: none; }
   .trustBar > div { min-height: 52px; }
   .safetyGrid { margin-top: 28px; }
   .safetyCard { min-height: 225px; }
@@ -621,7 +556,6 @@ h1 {
   .heroSummary { max-width: 430px; font-size: 1rem; }
   .heroActions { flex-direction: column; align-items: stretch; width: min(100%, 360px); margin-inline: auto; }
   .heroActions .button { width: 100%; }
-  .communityPreview { padding: 18px; margin-top: 52px; }
   .trustBar { grid-template-columns: 1fr; margin-top: 28px; }
   .trustBar > div { justify-content: flex-start; min-height: 56px; }
   .trustBar > div + div { border-top: 1px solid rgb(255 255 255 / 18%); border-left: 0; }
@@ -644,10 +578,6 @@ h1 {
 }
 
 @media (max-width: 430px) {
-  .categoryChips { grid-template-columns: repeat(2, 1fr); }
-  .previewTiles { grid-template-columns: repeat(2, 1fr); }
-  .previewTile { aspect-ratio: 1.35; }
-  .previewFooter { align-items: flex-start; flex-direction: column; gap: 14px; }
   .safetyStatement p { font-size: 0.84rem; }
   .footerTop { grid-template-columns: 1fr; }
   .footerBrand { grid-column: auto; }
