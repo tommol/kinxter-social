@@ -118,6 +118,7 @@
             <div>
               <strong>@client.DisplayName</strong>
               <code>@client.ClientId</code>
+              <small>@client.ClientType · @string.Join(" · ", client.GrantTypes)</small>
             </div>
             <div class="client-scopes">@string.Join(" · ", client.Scopes)</div>
             <span class="badge @(client.Enabled ? "" : "off")">@(client.Enabled ? "Enabled" : "Disabled")</span>

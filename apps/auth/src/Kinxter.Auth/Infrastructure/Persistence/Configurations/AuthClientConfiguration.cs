@@ -28,6 +28,14 @@ internal sealed class AuthClientConfiguration : IEntityTypeConfiguration<AuthCli
         builder.Property(client => client.ClientSecretConfigured)
             .IsRequired();
 
+        builder.Property(client => client.ClientType)
+            .HasConversion<string>()
+            .HasMaxLength(32)
+            .IsRequired();
+
+        builder.Property(client => client.GrantTypes)
+            .IsRequired();
+
         builder.Property(client => client.RedirectUris)
             .IsRequired();
 

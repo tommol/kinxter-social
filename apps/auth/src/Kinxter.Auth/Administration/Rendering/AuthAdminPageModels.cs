@@ -98,6 +98,8 @@ internal sealed class AuthAdminClientPageViewModel
         ClientId = attemptedCreate?.ClientId ?? client?.ClientId ?? "";
         DisplayName = attemptedCreate?.DisplayName ?? attemptedUpdate?.DisplayName ?? client?.DisplayName ?? "";
         Enabled = attemptedUpdate?.Enabled ?? client?.Enabled ?? true;
+        ClientType = attemptedCreate?.ClientType ?? attemptedUpdate?.ClientType ?? client?.ClientType ?? AuthClientType.Confidential;
+        GrantTypes = attemptedCreate?.GrantTypes ?? attemptedUpdate?.GrantTypes ?? client?.GrantTypes ?? AuthClientGrantTypes.Default;
         ClientSecretConfigured = client?.ClientSecretConfigured ?? false;
         RedirectUris = attemptedCreate?.RedirectUris ?? attemptedUpdate?.RedirectUris ?? client?.RedirectUris ?? [];
         PostLogoutRedirectUris = attemptedCreate?.PostLogoutRedirectUris ?? attemptedUpdate?.PostLogoutRedirectUris ?? client?.PostLogoutRedirectUris ?? [];
@@ -130,6 +132,10 @@ internal sealed class AuthAdminClientPageViewModel
     public string DisplayName { get; }
 
     public bool Enabled { get; }
+
+    public AuthClientType ClientType { get; }
+
+    public string[] GrantTypes { get; }
 
     public bool ClientSecretConfigured { get; }
 

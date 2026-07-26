@@ -83,6 +83,16 @@ internal sealed class AuthPageRenderer
         return RenderResultAsync<object?>(context, "/Views/Auth/AccessDenied.cshtml", null);
     }
 
+    public Task<IResult> DeviceVerificationAsync(
+        HttpContext context,
+        AuthDeviceVerificationPageViewModel model)
+    {
+        return RenderResultAsync(
+            context,
+            "/Views/Auth/DeviceVerification.cshtml",
+            model);
+    }
+
     private async Task<IResult> RenderResultAsync<TModel>(
         HttpContext context,
         string viewPath,

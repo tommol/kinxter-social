@@ -16,6 +16,10 @@ public sealed class AuthClient
 
     public bool ClientSecretConfigured { get; set; }
 
+    public AuthClientType ClientType { get; set; } = AuthClientType.Confidential;
+
+    public string[] GrantTypes { get; set; } = AuthClientGrantTypes.Default;
+
     public string[] RedirectUris { get; set; } = [];
 
     public string[] PostLogoutRedirectUris { get; set; } = [];

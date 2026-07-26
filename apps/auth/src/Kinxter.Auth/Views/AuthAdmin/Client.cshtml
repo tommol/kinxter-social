@@ -1,3 +1,4 @@
+@using Kinxter.Auth
 @model Kinxter.Auth.Administration.AuthAdminClientPageViewModel
 @{
     Layout = "/Views/AuthAdmin/_Layout.cshtml";
@@ -7,6 +8,10 @@
     var clientAction = Model.IsNew
         ? $"{Model.ControlPath}/realms/{Model.RealmId}/clients"
         : $"{Model.ControlPath}/realms/{Model.RealmId}/clients/{Model.ClientDatabaseId}";
+    var usesAuthorizationCode = Model.GrantTypes.Contains(AuthClientGrantTypes.AuthorizationCode, StringComparer.Ordinal);
+    var usesRefreshToken = Model.GrantTypes.Contains(AuthClientGrantTypes.RefreshToken, StringComparer.Ordinal);
+    var usesClientCredentials = Model.GrantTypes.Contains(AuthClientGrantTypes.ClientCredentials, StringComparer.Ordinal);
+    var usesDeviceCode = Model.GrantTypes.Contains(AuthClientGrantTypes.DeviceCode, StringComparer.Ordinal);
 }
 <div class="shell">
   <header class="topbar">
@@ -27,7 +32,7 @@
       <div>
         <p class="eyebrow">@Model.RealmName · OIDC client</p>
         <h1>@(Model.IsNew ? "New client" : Model.DisplayName)</h1>
-        <p class="subtitle">Confidential Authorization Code client with PKCE.</p>
+        <p class="subtitle">Configure the application type, OAuth/OIDC flows and least-privilege scopes.</p>
       </div>
       <a class="button secondary" href="@Model.ControlPath/realms/@Model.RealmId">Back to realm</a>
     </div>
@@ -68,9 +73,46 @@
             <input id="displayName" name="displayName" value="@Model.DisplayName" required>
           </div>
           <div class="field full">
+            <label for="clientType">Client type</label>
+            <select id="clientType" name="clientType">
+              @if (Model.ClientType == AuthClientType.Public)
+              {
+                <option value="Public" selected>Public — browser, mobile, desktop or device</option>
+                <option value="Confidential">Confidential — server-side application or service</option>
+              }
+              else
+              {
+                <option value="Public">Public — browser, mobile, desktop or device</option>
+                <option value="Confidential" selected>Confidential — server-side application or service</option>
+              }
+            </select>
+            <p class="help">Public clients cannot keep a secret. Confidential clients receive a generated secret. Changing type adds or removes the secret immediately.</p>
+          </div>
+          <div class="field full">
+            <label>Allowed flows</label>
+            <div class="choice-grid">
+              <div class="check">
+                <input id="grantAuthorizationCode" name="grantTypes" type="checkbox" value="@AuthClientGrantTypes.AuthorizationCode" checked="@usesAuthorizationCode">
+                <label for="grantAuthorizationCode"><strong>Authorization Code + PKCE</strong><small>Interactive web, SPA, mobile and desktop sign-in.</small></label>
+              </div>
+              <div class="check">
+                <input id="grantRefreshToken" name="grantTypes" type="checkbox" value="@AuthClientGrantTypes.RefreshToken" checked="@usesRefreshToken">
+                <label for="grantRefreshToken"><strong>Refresh Token</strong><small>Long-lived sessions; requires Authorization Code or Device Code.</small></label>
+              </div>
+              <div class="check">
+                <input id="grantClientCredentials" name="grantTypes" type="checkbox" value="@AuthClientGrantTypes.ClientCredentials" checked="@usesClientCredentials">
+                <label for="grantClientCredentials"><strong>Client Credentials</strong><small>Machine-to-machine access; confidential clients only.</small></label>
+              </div>
+              <div class="check">
+                <input id="grantDeviceCode" name="grantTypes" type="checkbox" value="@AuthClientGrantTypes.DeviceCode" checked="@usesDeviceCode">
+                <label for="grantDeviceCode"><strong>Device Code</strong><small>TVs, consoles and input-constrained devices.</small></label>
+              </div>
+            </div>
+          </div>
+          <div class="field full">
             <label for="redirectUris">Redirect URIs</label>
-            <textarea id="redirectUris" name="redirectUris" rows="4" required>@string.Join("\n", Model.RedirectUris)</textarea>
-            <p class="help">One exact absolute callback URL per line.</p>
+            <textarea id="redirectUris" name="redirectUris" rows="4">@string.Join("\n", Model.RedirectUris)</textarea>
+            <p class="help">One exact absolute callback URL per line. Required only for Authorization Code.</p>
           </div>
           <div class="field full">
             <label for="postLogoutRedirectUris">Post-logout redirect URIs</label>
@@ -79,8 +121,8 @@
           </div>
           <div class="field full">
             <label for="scopes">Allowed scopes</label>
-            <textarea id="scopes" name="scopes" rows="3" required>@string.Join(" ", Model.Scopes)</textarea>
-            <p class="help">Supported: openid, profile, email, roles, offline_access, kinxter.api, kinxter.admin.</p>
+            <textarea id="scopes" name="scopes" rows="3">@string.Join(" ", Model.Scopes)</textarea>
+            <p class="help">Supported: openid, profile, email, roles, offline_access, kinxter.api, kinxter.admin. OAuth-only clients may omit openid.</p>
           </div>
           @if (!Model.IsNew)
           {
@@ -115,7 +157,7 @@
         </div>
       </form>
     </section>
-    @if (!Model.IsNew)
+    @if (!Model.IsNew && Model.ClientType == AuthClientType.Confidential)
     {
       <section class="panel panel-body danger-zone">
         <div>

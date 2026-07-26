@@ -4,6 +4,7 @@ using Kinxter.Auth.Infrastructure.Persistence;
 using Kinxter.Shared.Abstractions.Time;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
+using OpenIddict.EntityFrameworkCore.Models;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Kinxter.Auth.Administration;
@@ -23,6 +24,15 @@ internal sealed class AuthClientAdministrationService
             Scopes.OfflineAccess,
             AuthScopes.KinxterApi,
             AuthScopes.KinxterAdmin
+        ],
+        StringComparer.Ordinal);
+
+    private static readonly HashSet<string> SupportedGrantTypes = new(
+        [
+            AuthClientGrantTypes.AuthorizationCode,
+            AuthClientGrantTypes.RefreshToken,
+            AuthClientGrantTypes.ClientCredentials,
+            AuthClientGrantTypes.DeviceCode
         ],
         StringComparer.Ordinal);
 
@@ -56,6 +66,8 @@ internal sealed class AuthClientAdministrationService
                 client.DisplayName,
                 client.Enabled,
                 client.ClientSecretConfigured,
+                client.ClientType,
+                client.GrantTypes,
                 client.RedirectUris,
                 client.PostLogoutRedirectUris,
                 client.Scopes,
@@ -97,7 +109,9 @@ internal sealed class AuthClientAdministrationService
         }
 
         var now = this.clock.UtcNow;
-        var secret = GenerateClientSecret();
+        var secret = normalized.ClientType == AuthClientType.Confidential
+            ? GenerateClientSecret()
+            : null;
         var client = new AuthClient
         {
             Id = Guid.CreateVersion7(now),
@@ -105,7 +119,9 @@ internal sealed class AuthClientAdministrationService
             ClientId = normalized.ClientId,
             DisplayName = normalized.DisplayName,
             Enabled = true,
-            ClientSecretConfigured = true,
+            ClientType = normalized.ClientType,
+            GrantTypes = normalized.GrantTypes,
+            ClientSecretConfigured = secret is not null,
             RedirectUris = normalized.RedirectUris,
             PostLogoutRedirectUris = normalized.PostLogoutRedirectUris,
             Scopes = normalized.Scopes,
@@ -157,8 +173,17 @@ internal sealed class AuthClientAdministrationService
                 "The OpenIddict registration is missing. Recreate the client.");
         }
 
+        var clientTypeChanged = client.ClientType != normalized.ClientType;
+        var secret = clientTypeChanged && normalized.ClientType == AuthClientType.Confidential
+            ? GenerateClientSecret()
+            : null;
+
         client.DisplayName = normalized.DisplayName;
         client.Enabled = normalized.Enabled;
+        client.ClientType = normalized.ClientType;
+        client.GrantTypes = normalized.GrantTypes;
+        client.ClientSecretConfigured = normalized.ClientType == AuthClientType.Confidential &&
+            (client.ClientSecretConfigured || secret is not null);
         client.RedirectUris = normalized.RedirectUris;
         client.PostLogoutRedirectUris = normalized.PostLogoutRedirectUris;
         client.Scopes = normalized.Scopes;
@@ -167,9 +192,27 @@ internal sealed class AuthClientAdministrationService
         var descriptor = new OpenIddictApplicationDescriptor();
         await this.applicationManager.PopulateAsync(descriptor, application, cancellationToken);
         OpenIddictClientDescriptorFactory.ApplyRegistration(descriptor, client);
+
+        if (secret is not null)
+        {
+            descriptor.ClientSecret = secret;
+        }
+
+        if (clientTypeChanged && normalized.ClientType == AuthClientType.Public)
+        {
+            if (application is not OpenIddictEntityFrameworkCoreApplication entity)
+            {
+                return AuthAdminUpdateClientResult.Failed(
+                    "The client secret cannot be removed from the current OpenIddict store.");
+            }
+
+            entity.ClientSecret = null;
+            descriptor.ClientSecret = null;
+        }
+
         await this.applicationManager.UpdateAsync(application, descriptor, cancellationToken);
 
-        return AuthAdminUpdateClientResult.Succeeded(client, client.Realm.Name);
+        return AuthAdminUpdateClientResult.Succeeded(client, client.Realm.Name, secret);
     }
 
     public async Task<AuthAdminRotateClientSecretResult> RotateSecretAsync(
@@ -186,6 +229,12 @@ internal sealed class AuthClientAdministrationService
         if (client is null)
         {
             return AuthAdminRotateClientSecretResult.NotFound();
+        }
+
+        if (client.ClientType != AuthClientType.Confidential)
+        {
+            return AuthAdminRotateClientSecretResult.Failed(
+                "Public clients do not use a client secret.");
         }
 
         var application = await this.applicationManager.FindByClientIdAsync(
@@ -212,6 +261,7 @@ internal sealed class AuthClientAdministrationService
         {
             ClientId = command.ClientId.Trim(),
             DisplayName = command.DisplayName.Trim(),
+            GrantTypes = CleanValues(command.GrantTypes),
             RedirectUris = CleanValues(command.RedirectUris),
             PostLogoutRedirectUris = CleanValues(command.PostLogoutRedirectUris),
             Scopes = CleanValues(command.Scopes)
@@ -223,6 +273,7 @@ internal sealed class AuthClientAdministrationService
         return command with
         {
             DisplayName = command.DisplayName.Trim(),
+            GrantTypes = CleanValues(command.GrantTypes),
             RedirectUris = CleanValues(command.RedirectUris),
             PostLogoutRedirectUris = CleanValues(command.PostLogoutRedirectUris),
             Scopes = CleanValues(command.Scopes)
@@ -238,6 +289,8 @@ internal sealed class AuthClientAdministrationService
 
         return ValidateRegistration(
             command.DisplayName,
+            command.ClientType,
+            command.GrantTypes,
             command.RedirectUris,
             command.PostLogoutRedirectUris,
             command.Scopes);
@@ -247,6 +300,8 @@ internal sealed class AuthClientAdministrationService
     {
         return ValidateRegistration(
             command.DisplayName,
+            command.ClientType,
+            command.GrantTypes,
             command.RedirectUris,
             command.PostLogoutRedirectUris,
             command.Scopes);
@@ -254,6 +309,8 @@ internal sealed class AuthClientAdministrationService
 
     private static string? ValidateRegistration(
         string displayName,
+        AuthClientType clientType,
+        IReadOnlyCollection<string> grantTypes,
         IReadOnlyCollection<string> redirectUris,
         IReadOnlyCollection<string> postLogoutRedirectUris,
         IReadOnlyCollection<string> scopes)
@@ -263,9 +320,51 @@ internal sealed class AuthClientAdministrationService
             return "Display name must contain 1-200 characters.";
         }
 
-        if (redirectUris.Count == 0)
+        if (!Enum.IsDefined(clientType))
         {
-            return "At least one redirect URI is required.";
+            return "The client type is not supported.";
+        }
+
+        var unsupportedGrantTypes = grantTypes
+            .Where(grantType => !SupportedGrantTypes.Contains(grantType))
+            .ToArray();
+
+        if (unsupportedGrantTypes.Length > 0)
+        {
+            return $"Unsupported grant types: {string.Join(", ", unsupportedGrantTypes)}.";
+        }
+
+        var hasAuthorizationCode = grantTypes.Contains(
+            AuthClientGrantTypes.AuthorizationCode,
+            StringComparer.Ordinal);
+        var hasDeviceCode = grantTypes.Contains(
+            AuthClientGrantTypes.DeviceCode,
+            StringComparer.Ordinal);
+        var hasClientCredentials = grantTypes.Contains(
+            AuthClientGrantTypes.ClientCredentials,
+            StringComparer.Ordinal);
+        var hasRefreshToken = grantTypes.Contains(
+            AuthClientGrantTypes.RefreshToken,
+            StringComparer.Ordinal);
+
+        if (!hasAuthorizationCode && !hasDeviceCode && !hasClientCredentials)
+        {
+            return "Select at least one primary flow: Authorization Code, Device Code or Client Credentials.";
+        }
+
+        if (clientType == AuthClientType.Public && hasClientCredentials)
+        {
+            return "Client Credentials requires a confidential client.";
+        }
+
+        if (hasRefreshToken && !hasAuthorizationCode && !hasDeviceCode)
+        {
+            return "Refresh Token requires Authorization Code or Device Code.";
+        }
+
+        if (hasAuthorizationCode && redirectUris.Count == 0)
+        {
+            return "At least one redirect URI is required for Authorization Code.";
         }
 
         if (redirectUris.Concat(postLogoutRedirectUris).Any(uri => !IsValidApplicationUri(uri)))
@@ -273,9 +372,9 @@ internal sealed class AuthClientAdministrationService
             return "Redirect URIs must be absolute HTTP or HTTPS URLs without fragments.";
         }
 
-        if (!scopes.Contains(Scopes.OpenId, StringComparer.Ordinal))
+        if (scopes.Contains(Scopes.OfflineAccess, StringComparer.Ordinal) && !hasRefreshToken)
         {
-            return "The openid scope is required for an OIDC client.";
+            return "The offline_access scope requires the Refresh Token grant.";
         }
 
         var unsupportedScopes = scopes
@@ -318,6 +417,8 @@ internal sealed record AuthAdminClientSummary(
     string DisplayName,
     bool Enabled,
     bool ClientSecretConfigured,
+    AuthClientType ClientType,
+    string[] GrantTypes,
     string[] RedirectUris,
     string[] Scopes,
     DateTimeOffset? UpdatedAt);
@@ -330,6 +431,8 @@ internal sealed record AuthAdminClientDetails(
     string DisplayName,
     bool Enabled,
     bool ClientSecretConfigured,
+    AuthClientType ClientType,
+    string[] GrantTypes,
     string[] RedirectUris,
     string[] PostLogoutRedirectUris,
     string[] Scopes,
@@ -339,6 +442,8 @@ internal sealed record AuthAdminClientDetails(
 internal sealed record AuthAdminCreateClientCommand(
     string ClientId,
     string DisplayName,
+    AuthClientType ClientType,
+    string[] GrantTypes,
     string[] RedirectUris,
     string[] PostLogoutRedirectUris,
     string[] Scopes);
@@ -346,6 +451,8 @@ internal sealed record AuthAdminCreateClientCommand(
 internal sealed record AuthAdminUpdateClientCommand(
     string DisplayName,
     bool Enabled,
+    AuthClientType ClientType,
+    string[] GrantTypes,
     string[] RedirectUris,
     string[] PostLogoutRedirectUris,
     string[] Scopes);
@@ -360,7 +467,7 @@ internal sealed record AuthAdminCreateClientResult(
     public static AuthAdminCreateClientResult Succeeded(
         AuthClient client,
         string realmName,
-        string clientSecret) =>
+        string? clientSecret) =>
         new(true, false, null, ToDetails(client, realmName), clientSecret);
 
     public static AuthAdminCreateClientResult Failed(string error) =>
@@ -378,6 +485,8 @@ internal sealed record AuthAdminCreateClientResult(
             client.DisplayName,
             client.Enabled,
             client.ClientSecretConfigured,
+            client.ClientType,
+            client.GrantTypes,
             client.RedirectUris,
             client.PostLogoutRedirectUris,
             client.Scopes,
@@ -389,16 +498,25 @@ internal sealed record AuthAdminUpdateClientResult(
     bool Success,
     bool ClientNotFound,
     string? Error,
-    AuthAdminClientDetails? Client)
+    AuthAdminClientDetails? Client,
+    string? ClientSecret)
 {
-    public static AuthAdminUpdateClientResult Succeeded(AuthClient client, string realmName) =>
-        new(true, false, null, AuthAdminCreateClientResult.ToDetails(client, realmName));
+    public static AuthAdminUpdateClientResult Succeeded(
+        AuthClient client,
+        string realmName,
+        string? clientSecret) =>
+        new(
+            true,
+            false,
+            null,
+            AuthAdminCreateClientResult.ToDetails(client, realmName),
+            clientSecret);
 
     public static AuthAdminUpdateClientResult Failed(string error) =>
-        new(false, false, error, null);
+        new(false, false, error, null, null);
 
     public static AuthAdminUpdateClientResult NotFound() =>
-        new(false, true, null, null);
+        new(false, true, null, null, null);
 }
 
 internal sealed record AuthAdminRotateClientSecretResult(

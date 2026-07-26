@@ -296,9 +296,12 @@ internal static class AuthAdminEndpoints
         }
 
         var form = await context.Request.ReadFormAsync(cancellationToken);
+        var clientType = ParseClientType(form["clientType"].ToString());
         var command = new AuthAdminCreateClientCommand(
             form["clientId"].ToString(),
             form["displayName"].ToString(),
+            clientType,
+            GetFormValues(form, "grantTypes"),
             SplitLines(form["redirectUris"].ToString()),
             SplitLines(form["postLogoutRedirectUris"].ToString()),
             SplitScopes(form["scopes"].ToString()));
@@ -378,9 +381,12 @@ internal static class AuthAdminEndpoints
         }
 
         var form = await context.Request.ReadFormAsync(cancellationToken);
+        var clientType = ParseClientType(form["clientType"].ToString());
         var command = new AuthAdminUpdateClientCommand(
             form["displayName"].ToString(),
             form.ContainsKey("enabled"),
+            clientType,
+            GetFormValues(form, "grantTypes"),
             SplitLines(form["redirectUris"].ToString()),
             SplitLines(form["postLogoutRedirectUris"].ToString()),
             SplitScopes(form["scopes"].ToString()));
@@ -397,6 +403,22 @@ internal static class AuthAdminEndpoints
 
         if (result.Success)
         {
+            if (!string.IsNullOrWhiteSpace(result.ClientSecret))
+            {
+                var updatedRealm = await administration.GetRealmAsync(realmId, cancellationToken);
+
+                return updatedRealm is null || result.Client is null
+                    ? Results.NotFound()
+                    : await renderer.ClientAsync(
+                        context,
+                        options,
+                        GetAdministratorName(context.User),
+                        updatedRealm,
+                        result.Client,
+                        clientSecret: result.ClientSecret,
+                        saved: true);
+            }
+
             return Results.Redirect(
                 $"{options.PathBase}/realms/{realmId:D}/clients/{clientId:D}?saved=true");
         }
@@ -444,7 +466,17 @@ internal static class AuthAdminEndpoints
 
         var realm = await administration.GetRealmAsync(realmId, cancellationToken);
 
-        if (realm is null || result.Client is null)
+        if (realm is null)
+        {
+            return Results.NotFound();
+        }
+
+        var client = result.Client ?? await clientAdministration.GetClientAsync(
+            realmId,
+            clientId,
+            cancellationToken);
+
+        if (client is null)
         {
             return Results.NotFound();
         }
@@ -454,7 +486,7 @@ internal static class AuthAdminEndpoints
             options,
             GetAdministratorName(context.User),
             realm,
-            result.Client,
+            client,
             error: result.Error,
             clientSecret: result.ClientSecret);
     }
@@ -471,6 +503,21 @@ internal static class AuthAdminEndpoints
         return value.Split(
             ['\r', '\n', ',', ' ', '\t'],
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static AuthClientType ParseClientType(string value)
+    {
+        return Enum.TryParse<AuthClientType>(value, ignoreCase: true, out var clientType)
+            ? clientType
+            : (AuthClientType)0;
+    }
+
+    private static string[] GetFormValues(IFormCollection form, string key)
+    {
+        return form[key]
+            .Where(value => value is not null)
+            .Select(value => value!)
+            .ToArray();
     }
 
     private static async Task<bool> IsAntiforgeryValidAsync(

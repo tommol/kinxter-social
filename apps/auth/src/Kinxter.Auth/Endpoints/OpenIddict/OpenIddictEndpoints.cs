@@ -9,6 +9,10 @@ internal static partial class OpenIddictEndpoints
     {
         app.MapMethods("/connect/authorize", [HttpMethods.Get, HttpMethods.Post], AuthorizeAsync);
         app.MapPost("/connect/token", ExchangeAsync);
+        app.MapGet("/connect/verify", VerifyDeviceAsync)
+            .RequireAuthorization();
+        app.MapPost("/connect/verify", VerifyDeviceDecisionAsync)
+            .RequireAuthorization();
         app.MapMethods("/connect/logout", [HttpMethods.Get, HttpMethods.Post], LogoutAsync);
         app.MapMethods("/connect/userinfo", [HttpMethods.Get, HttpMethods.Post], UserInfoAsync);
 

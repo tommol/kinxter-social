@@ -371,6 +371,10 @@ internal sealed class AuthClientOptions
 
     public string DisplayName { get; init; } = "";
 
+    public AuthClientType ClientType { get; init; } = AuthClientType.Confidential;
+
+    public string[] GrantTypes { get; init; } = AuthClientGrantTypes.Default;
+
     public string[] RedirectUris { get; init; } = [];
 
     public string[] PostLogoutRedirectUris { get; init; } = [];

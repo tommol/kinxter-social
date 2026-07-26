@@ -102,7 +102,9 @@ internal static class AuthServiceCollectionExtensions
                 options.SetConfigurationEndpointUris(".well-known/openid-configuration")
                     .SetJsonWebKeySetEndpointUris(".well-known/jwks")
                     .SetAuthorizationEndpointUris("connect/authorize")
+                    .SetDeviceAuthorizationEndpointUris("connect/device")
                     .SetEndSessionEndpointUris("connect/logout")
+                    .SetEndUserVerificationEndpointUris("connect/verify")
                     .SetPushedAuthorizationEndpointUris("connect/par")
                     .SetRevocationEndpointUris("connect/revocation")
                     .SetTokenEndpointUris("connect/token")
@@ -110,7 +112,9 @@ internal static class AuthServiceCollectionExtensions
 
                 options.AllowAuthorizationCodeFlow()
                     .RequireProofKeyForCodeExchange()
-                    .AllowRefreshTokenFlow();
+                    .AllowRefreshTokenFlow()
+                    .AllowClientCredentialsFlow()
+                    .AllowDeviceAuthorizationFlow();
 
                 options.RegisterScopes(
                     Scopes.Email,
@@ -126,6 +130,7 @@ internal static class AuthServiceCollectionExtensions
                 var aspNetCore = options.UseAspNetCore()
                     .EnableAuthorizationEndpointPassthrough()
                     .EnableEndSessionEndpointPassthrough()
+                    .EnableEndUserVerificationEndpointPassthrough()
                     .EnableTokenEndpointPassthrough()
                     .EnableUserInfoEndpointPassthrough();
 
@@ -149,6 +154,7 @@ internal static class AuthServiceCollectionExtensions
 
                         context.Issuer = new Uri(realmOptions.Issuer);
                         context.AuthorizationEndpoint = BuildRealmEndpoint(realmOptions, "/connect/authorize");
+                        context.DeviceAuthorizationEndpoint = BuildRealmEndpoint(realmOptions, "/connect/device");
                         context.TokenEndpoint = BuildRealmEndpoint(realmOptions, "/connect/token");
                         context.EndSessionEndpoint = BuildRealmEndpoint(realmOptions, "/connect/logout");
                         context.PushedAuthorizationEndpoint = BuildRealmEndpoint(realmOptions, "/connect/par");
@@ -157,6 +163,41 @@ internal static class AuthServiceCollectionExtensions
                         context.JsonWebKeySetEndpoint = BuildRealmEndpoint(realmOptions, "/.well-known/jwks");
 
                         return default;
+                    });
+                });
+
+                options.AddEventHandler<OpenIddict.Server.OpenIddictServerEvents.ValidateDeviceAuthorizationRequestContext>(builder =>
+                {
+                    builder.SetOrder(int.MaxValue);
+                    builder.UseInlineHandler(async context =>
+                    {
+                        var httpRequest = context.Transaction.GetHttpRequest();
+                        var realmOptions = httpRequest?.HttpContext.GetAuthRealmOptions();
+
+                        if (httpRequest is null || realmOptions is null)
+                        {
+                            context.Reject(
+                                error: Errors.InvalidRequest,
+                                description: "The auth realm could not be resolved.");
+                            return;
+                        }
+
+                        var dbContext = httpRequest.HttpContext.RequestServices
+                            .GetRequiredService<AuthDbContext>();
+                        var clientIsEnabled = await dbContext.AuthClients
+                            .AsNoTracking()
+                            .AnyAsync(client =>
+                                client.ClientId == context.ClientId &&
+                                client.Enabled &&
+                                client.Realm.Name == realmOptions.Realm,
+                                httpRequest.HttpContext.RequestAborted);
+
+                        if (!clientIsEnabled)
+                        {
+                            context.Reject(
+                                error: Errors.UnauthorizedClient,
+                                description: "The client is not enabled for this realm.");
+                        }
                     });
                 });
             });

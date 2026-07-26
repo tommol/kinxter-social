@@ -92,6 +92,8 @@ internal sealed class AuthAdministrationService
                         client.DisplayName,
                         client.Enabled,
                         client.ClientSecretConfigured,
+                        client.ClientType,
+                        client.GrantTypes,
                         client.RedirectUris,
                         client.Scopes,
                         client.UpdatedAt))

@@ -1,0 +1,36 @@
+@model Kinxter.Auth.Rendering.Models.AuthDeviceVerificationPageViewModel
+@{
+    Layout = "/Views/Auth/_Layout.cshtml";
+    ViewData["Title"] = "Authorize device";
+}
+<h1>Authorize a device</h1>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+  <p class="error">@Model.Error</p>
+}
+@if (!Model.HasValidRequest)
+{
+  <p>Enter the code shown by the application or device.</p>
+  <form method="get" action="@Model.VerificationPath">
+    <label for="userCode">Device code</label>
+    <input id="userCode" name="user_code" value="@Model.UserCode" autocomplete="one-time-code" required autofocus>
+    <button type="submit">Continue</button>
+  </form>
+}
+else
+{
+  <p><strong>@Model.ApplicationName</strong> is requesting access to this account.</p>
+  <dl>
+    <dt>Code</dt>
+    <dd><code>@Model.UserCode</code></dd>
+    <dt>Scopes</dt>
+    <dd>@(Model.Scopes.Length == 0 ? "No additional scopes" : string.Join(", ", Model.Scopes))</dd>
+  </dl>
+  <p>Confirm only if this code exactly matches the code displayed on your device.</p>
+  <form method="post" action="@Model.VerificationPath">
+    <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
+    <input type="hidden" name="user_code" value="@Model.UserCode">
+    <button type="submit" name="decision" value="accept">Authorize</button>
+    <button class="secondary" type="submit" name="decision" value="deny">Deny</button>
+  </form>
+}

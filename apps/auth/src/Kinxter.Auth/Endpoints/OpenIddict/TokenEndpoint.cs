@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using Kinxter.Auth.Infrastructure.Persistence;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
+using Microsoft.IdentityModel.Tokens;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Kinxter.Auth;
@@ -21,7 +23,10 @@ internal static partial class OpenIddictEndpoints
         var request = context.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
 
-        if (!request.IsAuthorizationCodeGrantType() && !request.IsRefreshTokenGrantType())
+        if (!request.IsAuthorizationCodeGrantType() &&
+            !request.IsRefreshTokenGrantType() &&
+            !request.IsClientCredentialsGrantType() &&
+            !request.IsDeviceCodeGrantType())
         {
             return Results.Forbid(
                 authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
@@ -45,6 +50,31 @@ internal static partial class OpenIddictEndpoints
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
                     [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client is not enabled for this realm."
                 }));
+        }
+
+        if (request.IsClientCredentialsGrantType())
+        {
+            var identity = new ClaimsIdentity(
+                authenticationType: TokenValidationParameters.DefaultAuthenticationType,
+                nameType: Claims.Name,
+                roleType: Claims.Role);
+
+            identity.SetClaim(Claims.Subject, request.ClientId)
+                .SetClaim(Claims.ClientId, request.ClientId)
+                .SetClaim(Claims.Name, request.ClientId)
+                .SetClaim("realm", authOptions.Realm)
+                .SetClaim("token_use", "client");
+
+            var clientPrincipal = new ClaimsPrincipal(identity);
+            var scopes = request.GetScopes();
+            clientPrincipal.SetScopes(scopes);
+            clientPrincipal.SetResources(await scopeManager.ListResourcesAsync(scopes).ToListAsync());
+            clientPrincipal.SetDestinations(GetDestinations);
+
+            return Results.SignIn(
+                clientPrincipal,
+                properties: null,
+                authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
         var result = await context.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);

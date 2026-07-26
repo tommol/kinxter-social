@@ -154,3 +154,17 @@ internal sealed class AuthTotpSetupPageViewModel
 
     public string? Error { get; }
 }
+
+internal sealed record AuthDeviceVerificationPageViewModel(
+    string VerificationPath,
+    string AntiforgeryToken,
+    string? UserCode,
+    string? ApplicationName,
+    string[] Scopes,
+    string? Error)
+{
+    public bool HasValidRequest =>
+        !string.IsNullOrWhiteSpace(UserCode) &&
+        !string.IsNullOrWhiteSpace(ApplicationName) &&
+        string.IsNullOrWhiteSpace(Error);
+}

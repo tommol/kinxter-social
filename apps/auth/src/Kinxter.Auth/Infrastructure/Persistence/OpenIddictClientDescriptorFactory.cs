@@ -14,6 +14,8 @@ internal static class OpenIddictClientDescriptorFactory
         return Create(
             client.ClientId,
             client.DisplayName,
+            client.ClientType,
+            client.GrantTypes,
             client.RedirectUris,
             client.PostLogoutRedirectUris,
             client.Scopes,
@@ -28,10 +30,14 @@ internal static class OpenIddictClientDescriptorFactory
         return Create(
             client.ClientId,
             client.DisplayName,
+            client.ClientType,
+            client.GrantTypes,
             client.RedirectUris,
             client.PostLogoutRedirectUris,
             client.Scopes,
-            client.ClientSecret);
+            client.ClientType == AuthClientType.Confidential
+                ? client.ClientSecret
+                : null);
     }
 
     public static void ApplyRegistration(
@@ -42,15 +48,23 @@ internal static class OpenIddictClientDescriptorFactory
         ArgumentNullException.ThrowIfNull(client);
 
         descriptor.ClientId = client.ClientId;
-        descriptor.ClientType = ClientTypes.Confidential;
+        descriptor.ClientType = client.ClientType switch
+        {
+            AuthClientType.Public => ClientTypes.Public,
+            AuthClientType.Confidential => ClientTypes.Confidential,
+            _ => throw new InvalidOperationException($"Unsupported client type '{client.ClientType}'.")
+        };
         descriptor.ConsentType = ConsentTypes.Implicit;
         descriptor.DisplayName = client.DisplayName;
 
         descriptor.Permissions.Clear();
-        descriptor.Permissions.UnionWith(CreatePermissions(client.Scopes));
+        descriptor.Permissions.UnionWith(CreatePermissions(client.GrantTypes, client.Scopes));
 
         descriptor.Requirements.Clear();
-        descriptor.Requirements.Add(Requirements.Features.ProofKeyForCodeExchange);
+        if (client.GrantTypes.Contains(AuthClientGrantTypes.AuthorizationCode, StringComparer.Ordinal))
+        {
+            descriptor.Requirements.Add(Requirements.Features.ProofKeyForCodeExchange);
+        }
 
         descriptor.RedirectUris.Clear();
         foreach (var redirectUri in client.RedirectUris)
@@ -68,6 +82,8 @@ internal static class OpenIddictClientDescriptorFactory
     private static OpenIddictApplicationDescriptor Create(
         string clientId,
         string displayName,
+        AuthClientType clientType,
+        IEnumerable<string> grantTypes,
         IEnumerable<string> redirectUris,
         IEnumerable<string> postLogoutRedirectUris,
         IEnumerable<string> scopes,
@@ -77,6 +93,8 @@ internal static class OpenIddictClientDescriptorFactory
         {
             ClientId = clientId,
             DisplayName = displayName,
+            ClientType = clientType,
+            GrantTypes = CleanValues(grantTypes),
             RedirectUris = CleanValues(redirectUris),
             PostLogoutRedirectUris = CleanValues(postLogoutRedirectUris),
             Scopes = CleanValues(scopes)
@@ -91,16 +109,45 @@ internal static class OpenIddictClientDescriptorFactory
         return descriptor;
     }
 
-    private static IEnumerable<string> CreatePermissions(IEnumerable<string> scopes)
+    private static IEnumerable<string> CreatePermissions(
+        IEnumerable<string> grantTypes,
+        IEnumerable<string> scopes)
     {
-        yield return Permissions.Endpoints.Authorization;
-        yield return Permissions.Endpoints.EndSession;
-        yield return Permissions.Endpoints.PushedAuthorization;
-        yield return Permissions.Endpoints.Revocation;
-        yield return Permissions.Endpoints.Token;
-        yield return Permissions.GrantTypes.AuthorizationCode;
-        yield return Permissions.GrantTypes.RefreshToken;
-        yield return Permissions.ResponseTypes.Code;
+        var grants = grantTypes.ToHashSet(StringComparer.Ordinal);
+
+        if (grants.Contains(AuthClientGrantTypes.AuthorizationCode))
+        {
+            yield return Permissions.Endpoints.Authorization;
+            yield return Permissions.Endpoints.EndSession;
+            yield return Permissions.Endpoints.PushedAuthorization;
+            yield return Permissions.Endpoints.Token;
+            yield return Permissions.GrantTypes.AuthorizationCode;
+            yield return Permissions.ResponseTypes.Code;
+        }
+
+        if (grants.Contains(AuthClientGrantTypes.ClientCredentials))
+        {
+            yield return Permissions.Endpoints.Token;
+            yield return Permissions.GrantTypes.ClientCredentials;
+        }
+
+        if (grants.Contains(AuthClientGrantTypes.DeviceCode))
+        {
+            yield return Permissions.Endpoints.DeviceAuthorization;
+            yield return Permissions.Endpoints.Token;
+            yield return Permissions.Prefixes.GrantType + AuthClientGrantTypes.DeviceCode;
+        }
+
+        if (grants.Contains(AuthClientGrantTypes.RefreshToken))
+        {
+            yield return Permissions.Endpoints.Token;
+            yield return Permissions.GrantTypes.RefreshToken;
+        }
+
+        if (grants.Count > 0)
+        {
+            yield return Permissions.Endpoints.Revocation;
+        }
 
         foreach (var scope in scopes.Distinct(StringComparer.Ordinal))
         {

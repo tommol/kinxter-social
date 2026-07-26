@@ -166,7 +166,10 @@ internal static class AuthDatabaseExtensions
                 ClientId = clientId,
                 DisplayName = configuredClient.DisplayName,
                 Enabled = true,
-                ClientSecretConfigured = !string.IsNullOrWhiteSpace(configuredClient.ClientSecret),
+                ClientType = configuredClient.ClientType,
+                GrantTypes = CleanValues(configuredClient.GrantTypes),
+                ClientSecretConfigured = configuredClient.ClientType == AuthClientType.Confidential &&
+                    !string.IsNullOrWhiteSpace(configuredClient.ClientSecret),
                 RedirectUris = CleanValues(configuredClient.RedirectUris),
                 PostLogoutRedirectUris = CleanValues(configuredClient.PostLogoutRedirectUris),
                 Scopes = CleanValues(configuredClient.Scopes),

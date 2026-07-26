@@ -256,6 +256,8 @@ public sealed class AuthAdministrationTests
             new AuthAdminCreateClientCommand(
                 "standard-web",
                 "Standard web",
+                AuthClientType.Confidential,
+                [AuthClientGrantTypes.AuthorizationCode, AuthClientGrantTypes.RefreshToken],
                 ["https://web.example/auth/callback"],
                 ["https://web.example"],
                 ["openid", "profile", "offline_access", "kinxter.api"]));
@@ -274,6 +276,8 @@ public sealed class AuthAdministrationTests
             new AuthAdminUpdateClientCommand(
                 "Renamed display",
                 false,
+                AuthClientType.Confidential,
+                [AuthClientGrantTypes.AuthorizationCode, AuthClientGrantTypes.RefreshToken],
                 ["https://web.example/api/auth/callback/kinxter"],
                 ["https://web.example/signed-out"],
                 ["openid", "email", "kinxter.api"]));
@@ -299,7 +303,7 @@ public sealed class AuthAdministrationTests
     }
 
     [Fact]
-    public async Task Client_management_rejects_non_oidc_and_unsafe_registrations()
+    public async Task Client_management_accepts_oauth_only_and_rejects_unsafe_or_incompatible_registrations()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -321,28 +325,140 @@ public sealed class AuthAdministrationTests
         await dbContext.SaveChangesAsync();
         var service = scope.ServiceProvider.GetRequiredService<AuthClientAdministrationService>();
 
-        var missingOpenId = await service.CreateClientAsync(
+        var oauthOnly = await service.CreateClientAsync(
             realm.Id,
             new AuthAdminCreateClientCommand(
-                "invalid-client",
-                "Invalid client",
-                ["https://web.example/callback"],
+                "service-client",
+                "Service client",
+                AuthClientType.Confidential,
+                [AuthClientGrantTypes.ClientCredentials],
                 [],
-                ["profile"]));
+                [],
+                ["kinxter.api"]));
+        var publicMachineClient = await service.CreateClientAsync(
+            realm.Id,
+            new AuthAdminCreateClientCommand(
+                "public-machine",
+                "Public machine client",
+                AuthClientType.Public,
+                [AuthClientGrantTypes.ClientCredentials],
+                [],
+                [],
+                ["kinxter.api"]));
         var unsafeRedirect = await service.CreateClientAsync(
             realm.Id,
             new AuthAdminCreateClientCommand(
                 "unsafe-client",
                 "Unsafe client",
+                AuthClientType.Public,
+                [AuthClientGrantTypes.AuthorizationCode],
                 ["javascript:alert(1)"],
                 [],
                 ["openid"]));
 
-        Assert.False(missingOpenId.Success);
-        Assert.Contains("openid", missingOpenId.Error);
+        Assert.True(oauthOnly.Success);
+        Assert.NotNull(oauthOnly.ClientSecret);
+        Assert.False(publicMachineClient.Success);
+        Assert.Contains("confidential", publicMachineClient.Error);
         Assert.False(unsafeRedirect.Success);
         Assert.Contains("HTTP or HTTPS", unsafeRedirect.Error);
-        Assert.Empty(await dbContext.AuthClients.ToArrayAsync());
+        Assert.Single(await dbContext.AuthClients.ToArrayAsync());
+    }
+
+    [Fact]
+    public async Task Public_device_client_has_no_secret_and_type_change_generates_one()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddDbContext<AuthDbContext>(options =>
+        {
+            options.UseInMemoryDatabase(Guid.NewGuid().ToString("D"));
+            options.UseOpenIddict();
+        });
+        services.AddOpenIddict()
+            .AddCore(options => options.UseEntityFrameworkCore().UseDbContext<AuthDbContext>());
+        services.AddSingleton<IClock>(new TestClock(DateTimeOffset.UtcNow));
+        services.AddScoped<AuthClientAdministrationService>();
+
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var realm = CreateRealm();
+        dbContext.AuthRealms.Add(realm);
+        await dbContext.SaveChangesAsync();
+        var service = scope.ServiceProvider.GetRequiredService<AuthClientAdministrationService>();
+        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+
+        var created = await service.CreateClientAsync(
+            realm.Id,
+            new AuthAdminCreateClientCommand(
+                "living-room-device",
+                "Living room device",
+                AuthClientType.Public,
+                [AuthClientGrantTypes.DeviceCode, AuthClientGrantTypes.RefreshToken],
+                [],
+                [],
+                ["openid", "profile", "offline_access", "kinxter.api"]));
+
+        Assert.True(created.Success);
+        Assert.Null(created.ClientSecret);
+        Assert.False(created.Client!.ClientSecretConfigured);
+        var application = await manager.FindByClientIdAsync("living-room-device");
+        Assert.Equal(
+            OpenIddictConstants.ClientTypes.Public,
+            await manager.GetClientTypeAsync(application!));
+        Assert.Contains(
+            OpenIddictConstants.Permissions.Endpoints.DeviceAuthorization,
+            await manager.GetPermissionsAsync(application!));
+
+        var updated = await service.UpdateClientAsync(
+            realm.Id,
+            created.Client.Id,
+            new AuthAdminUpdateClientCommand(
+                "Living room backend",
+                true,
+                AuthClientType.Confidential,
+                [AuthClientGrantTypes.ClientCredentials],
+                [],
+                [],
+                ["kinxter.api"]));
+
+        Assert.True(updated.Success);
+        Assert.NotNull(updated.ClientSecret);
+        application = await manager.FindByClientIdAsync("living-room-device");
+        Assert.Equal(
+            OpenIddictConstants.ClientTypes.Confidential,
+            await manager.GetClientTypeAsync(application!));
+        Assert.True(await manager.ValidateClientSecretAsync(application!, updated.ClientSecret!));
+        Assert.Contains(
+            OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
+            await manager.GetPermissionsAsync(application!));
+
+        var changedBackToPublic = await service.UpdateClientAsync(
+            realm.Id,
+            created.Client.Id,
+            new AuthAdminUpdateClientCommand(
+                "Living room device",
+                true,
+                AuthClientType.Public,
+                [AuthClientGrantTypes.DeviceCode],
+                [],
+                [],
+                ["openid", "kinxter.api"]));
+
+        Assert.True(changedBackToPublic.Success);
+        Assert.Null(changedBackToPublic.ClientSecret);
+        Assert.False(changedBackToPublic.Client!.ClientSecretConfigured);
+        application = await manager.FindByClientIdAsync("living-room-device");
+        Assert.Equal(
+            OpenIddictConstants.ClientTypes.Public,
+            await manager.GetClientTypeAsync(application!));
+        Assert.False(await manager.ValidateClientSecretAsync(application!, updated.ClientSecret!));
+
+        var rotation = await service.RotateSecretAsync(realm.Id, created.Client.Id);
+
+        Assert.False(rotation.Success);
+        Assert.Contains("Public clients", rotation.Error);
     }
 
     private static AuthDbContext CreateDbContext()
