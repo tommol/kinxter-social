@@ -1,5 +1,8 @@
 using Kinxter.Auth.Administration;
+using Kinxter.Auth.Email;
+using Kinxter.Auth.Infrastructure.Outbox;
 using Kinxter.Auth.Infrastructure.Persistence;
+using Kinxter.Shared.Abstractions.Outbox;
 using Kinxter.Shared.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
@@ -10,6 +13,7 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
+using System.Threading.RateLimiting;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Kinxter.Auth;
@@ -57,7 +61,7 @@ internal static class AuthServiceCollectionExtensions
         services
             .AddIdentity<AuthUser, IdentityRole<Guid>>(options =>
             {
-                options.SignIn.RequireConfirmedEmail = false;
+                options.SignIn.RequireConfirmedEmail = true;
                 options.User.RequireUniqueEmail = false;
                 options.Lockout.AllowedForNewUsers = true;
                 options.Lockout.MaxFailedAccessAttempts = strictestRealm ? 5 : 8;
@@ -67,6 +71,11 @@ internal static class AuthServiceCollectionExtensions
             })
             .AddEntityFrameworkStores<AuthDbContext>()
             .AddDefaultTokenProviders();
+
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+        {
+            options.TokenLifespan = TimeSpan.FromHours(24);
+        });
 
         services.ConfigureApplicationCookie(options =>
         {
@@ -206,6 +215,27 @@ internal static class AuthServiceCollectionExtensions
         services.AddScoped<AuthPageRenderer>();
         services.AddScoped<AuthIntegrationEventPublisher>();
         services.AddScoped<ExternalLoginAccountManager>();
+        services.AddScoped<IOutboxWriter<AuthOutbox>, AuthOutboxWriter>();
+        services.AddScoped<IOutboxStore, AuthOutboxStore>();
+        services.AddScoped<AuthEmailOutboxWriter>();
+        services.AddScoped<EmailConfirmationService>();
+        services.AddSingleton(AuthEmailOptions.FromConfiguration(configuration));
+        services.AddScoped<IAuthEmailSender, SmtpAuthEmailSender>();
+        services.AddHostedService<AuthEmailOutboxWorker>();
+        services.AddRateLimiter(rateLimiter =>
+        {
+            rateLimiter.AddPolicy("public-auth-sensitive", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(10),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+            rateLimiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        });
         services.AddAuthAdministration(authAdminOptions);
 
         return services;

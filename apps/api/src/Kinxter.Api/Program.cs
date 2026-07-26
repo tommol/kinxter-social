@@ -3,6 +3,13 @@ using Kinxter.Api;
 using Kinxter.Api.Authentication;
 using Kinxter.Api.Contracts.Dtos;
 using Kinxter.Profiles;
+using Kinxter.Tags;
+using Kinxter.Locations;
+using Kinxter.Communities;
+using Kinxter.SocialGraph;
+using Kinxter.Recommendations;
+using Kinxter.Onboarding;
+using Kinxter.Media;
 using Kinxter.Shared.Infrastructure.DependencyInjection;
 using Scalar.AspNetCore;
 
@@ -15,6 +22,13 @@ var allowedOrigins = builder.Configuration
 builder.Services.AddSharedInfrastructure(builder.Configuration);
 builder.Services.AddAccountsModule(builder.Configuration);
 builder.Services.AddProfilesModule(builder.Configuration);
+builder.Services.AddTagsModule(builder.Configuration);
+builder.Services.AddLocationsModule(builder.Configuration);
+builder.Services.AddCommunitiesModule(builder.Configuration);
+builder.Services.AddSocialGraphModule(builder.Configuration);
+builder.Services.AddRecommendationsModule();
+builder.Services.AddOnboardingModule(builder.Configuration);
+builder.Services.AddMediaModule(builder.Configuration);
 builder.Services.AddKinxterApiAuthentication(builder.Configuration);
 builder.Services.AddOpenApi("v1");
 

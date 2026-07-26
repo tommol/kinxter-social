@@ -20,6 +20,13 @@
   <ItemGroup>
     <ProjectReference Include="../modules/Kinxter.Accounts/Kinxter.Accounts.csproj" />
     <ProjectReference Include="../modules/Kinxter.Profiles/Kinxter.Profiles.csproj" />
+    <ProjectReference Include="../modules/Kinxter.Tags/Kinxter.Tags.csproj" />
+    <ProjectReference Include="../modules/Kinxter.Locations/Kinxter.Locations.csproj" />
+    <ProjectReference Include="../modules/Kinxter.Communities/Kinxter.Communities.csproj" />
+    <ProjectReference Include="../modules/Kinxter.SocialGraph/Kinxter.SocialGraph.csproj" />
+    <ProjectReference Include="../modules/Kinxter.Recommendations/Kinxter.Recommendations.csproj" />
+    <ProjectReference Include="../modules/Kinxter.Onboarding/Kinxter.Onboarding.csproj" />
+    <ProjectReference Include="../modules/Kinxter.Media/Kinxter.Media.csproj" />
     <ProjectReference Include="../shared/Kinxter.IntegrationEvents/Kinxter.IntegrationEvents.csproj" />
     <ProjectReference Include="../shared/Kinxter.Shared.Infrastructure/Kinxter.Shared.Infrastructure.csproj" />
   </ItemGroup>

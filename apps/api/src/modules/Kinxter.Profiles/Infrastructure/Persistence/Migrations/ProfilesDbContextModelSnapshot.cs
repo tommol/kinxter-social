@@ -31,6 +31,9 @@ namespace Kinxter.Profiles.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("AccountId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AvatarAssetId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Bio")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -62,6 +65,10 @@ namespace Kinxter.Profiles.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Visibility")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.HasKey("Id");
 

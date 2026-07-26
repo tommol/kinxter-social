@@ -1,4 +1,6 @@
 using Kinxter.Accounts.Application.IdentityEvents;
+using Kinxter.Accounts.Application;
+using Kinxter.Accounts.Contracts;
 using Kinxter.IntegrationEvents.Identity;
 using Kinxter.Accounts.Infrastructure.Outbox;
 using Kinxter.Accounts.Infrastructure.Persistence;
@@ -14,6 +16,7 @@ public static class AccountsModule
     public static IServiceCollection AddAccountsModule(this IServiceCollection services)
     {
         AddApplicationServices(services);
+        services.AddSingleton(new AccountConsentOptions());
 
         return services;
     }
@@ -25,6 +28,7 @@ public static class AccountsModule
         ArgumentNullException.ThrowIfNull(configuration);
 
         AddApplicationServices(services);
+        services.AddSingleton(AccountConsentOptions.FromConfiguration(configuration));
 
         var connectionString = configuration.GetConnectionString(AccountsDbContextOptions.ConnectionStringName)
             ?? throw new InvalidOperationException(
@@ -46,5 +50,6 @@ public static class AccountsModule
         services.AddScoped<IModuleEventHandler<IdentityUserDeletedV1>, IdentityUserDeletedHandler>();
         services.AddScoped<IOutboxWriter<AccountsOutbox>, AccountsOutboxWriter>();
         services.AddScoped<IOutboxStore, AccountsOutboxStore>();
+        services.AddScoped<IAccountsService, AccountsService>();
     }
 }

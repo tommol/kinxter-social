@@ -1,5 +1,7 @@
 using Kinxter.Profiles.Application.CompleteProfileOnboarding;
 using Kinxter.Profiles.Application.CreateCurrentProfile;
+using Kinxter.Profiles.Application;
+using Kinxter.Profiles.Contracts;
 using Kinxter.Profiles.Infrastructure.Persistence;
 using Kinxter.Shared.Abstractions.Application;
 using Microsoft.Extensions.Configuration;
@@ -40,5 +42,6 @@ public static class ProfilesModule
     {
         services.AddScoped<ICommandHandler<CreateCurrentProfileCommand, CreateCurrentProfileResult>, CreateCurrentProfileHandler>();
         services.AddScoped<ICommandHandler<CompleteProfileOnboardingCommand, CompleteProfileOnboardingResult>, CompleteProfileOnboardingHandler>();
+        services.AddScoped<IProfilesService, ProfilesService>();
     }
 }

@@ -29,6 +29,11 @@ internal sealed class CreateAccountOnIdentityUserRegisteredHandler : IModuleEven
     {
         ArgumentNullException.ThrowIfNull(moduleEvent);
 
+        if (await this.dbContext.InboxMessages.AnyAsync(message => message.EventId == moduleEvent.EventId, cancellationToken))
+        {
+            return;
+        }
+
         var identityProvider = KinxterAuthIdentityProvider.ForRealm(moduleEvent.Realm);
         var accountExists = await this.dbContext.Accounts
             .AnyAsync(account =>
@@ -38,6 +43,11 @@ internal sealed class CreateAccountOnIdentityUserRegisteredHandler : IModuleEven
 
         if (accountExists)
         {
+            this.dbContext.InboxMessages.Add(new ProcessedAccountEvent(
+                moduleEvent.EventId,
+                nameof(IdentityUserRegisteredV1),
+                moduleEvent.OccurredAt));
+            await this.dbContext.SaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -54,6 +64,10 @@ internal sealed class CreateAccountOnIdentityUserRegisteredHandler : IModuleEven
             account.Id);
 
         this.dbContext.Accounts.Add(account);
+        this.dbContext.InboxMessages.Add(new ProcessedAccountEvent(
+            moduleEvent.EventId,
+            nameof(IdentityUserRegisteredV1),
+            moduleEvent.OccurredAt));
         await this.outboxWriter.AddAsync(accountCreated, cancellationToken);
         await this.dbContext.SaveChangesAsync(cancellationToken);
     }

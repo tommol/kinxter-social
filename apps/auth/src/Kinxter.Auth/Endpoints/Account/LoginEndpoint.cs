@@ -49,6 +49,11 @@ internal static partial class AccountEndpoints
             return Results.Redirect(returnUrl);
         }
 
+        if (result.IsNotAllowed && !user.EmailConfirmed)
+        {
+            return await renderer.CheckEmailAsync(context, options, user.Email ?? email, returnUrl);
+        }
+
         return await renderer.LoginAsync(context, options, returnUrl, "Invalid credentials.");
     }
 }

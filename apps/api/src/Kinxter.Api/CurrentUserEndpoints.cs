@@ -4,6 +4,7 @@ using Kinxter.Api.Authentication;
 using Kinxter.Api.Contracts.Dtos;
 using Kinxter.Profiles.Infrastructure.Persistence;
 using Kinxter.Profiles.Model;
+using Kinxter.Onboarding.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kinxter.Api;
@@ -30,6 +31,7 @@ internal static class CurrentUserEndpoints
         ApiAuthenticationOptions authOptions,
         AccountsDbContext accountsDbContext,
         ProfilesDbContext profilesDbContext,
+        IOnboardingService onboardingService,
         CancellationToken cancellationToken)
     {
         var identity = GetIdentity(principal);
@@ -54,23 +56,33 @@ internal static class CurrentUserEndpoints
                 null,
                 null,
                 null,
+                null,
+                null,
                 AccountRequired: true,
                 ProfileRequired: true,
-                OnboardingRequired: true));
+                OnboardingRequired: true,
+                OnboardingStatus: "NotStarted",
+                OnboardingCurrentStep: "account",
+                InterestsStepStatus: "Pending",
+                RecommendationsStepStatus: "Pending",
+                ConsentsRequired: true,
+                VisibilityRequired: true));
         }
 
         var profile = await profilesDbContext.Profiles
             .AsNoTracking()
             .SingleOrDefaultAsync(current => current.AccountId == account.Id, cancellationToken);
 
-        return Results.Ok(ToResponse(identity, account.Id, account.Status.ToString(), profile));
+        var onboarding = await onboardingService.GetAsync(account.Id, cancellationToken);
+        return Results.Ok(ToResponse(identity, account.Id, account.Status.ToString(), profile, onboarding));
     }
 
     private static CurrentUserResponseDto ToResponse(
         PublicIdentity identity,
         Guid accountId,
         string accountStatus,
-        Profile? profile)
+        Profile? profile,
+        OnboardingState onboarding)
     {
         return new CurrentUserResponseDto(
             identity.Subject,
@@ -83,9 +95,17 @@ internal static class CurrentUserEndpoints
             profile?.DisplayName,
             profile?.Bio,
             profile?.ProfilePictureUrl,
+            profile?.AvatarAssetId,
+            profile?.Visibility?.ToString(),
             AccountRequired: false,
             ProfileRequired: profile is null,
-            OnboardingRequired: profile is null || profile.OnboardingCompletedAt is null);
+            OnboardingRequired: onboarding.CompletedAt is null,
+            OnboardingStatus: onboarding.Status,
+            OnboardingCurrentStep: onboarding.CurrentStep,
+            InterestsStepStatus: onboarding.InterestsStatus,
+            RecommendationsStepStatus: onboarding.RecommendationsStatus,
+            ConsentsRequired: !onboarding.ConsentsCompleted,
+            VisibilityRequired: !onboarding.VisibilityCompleted);
     }
 
     private static PublicIdentity GetIdentity(ClaimsPrincipal principal)

@@ -60,6 +60,14 @@ internal static class ApiAuthenticationExtensions
             .AddPolicy(ApiAuthorizationPolicies.AdminUsersManage, policy =>
             {
                 ConfigureBackofficePolicy(policy, options, ApiPermissions.AdminUsersManage);
+            })
+            .AddPolicy(ApiAuthorizationPolicies.TaxonomyManage, policy =>
+            {
+                ConfigureBackofficePolicy(policy, options, ApiPermissions.TaxonomyManage);
+            })
+            .AddPolicy(ApiAuthorizationPolicies.CommunitiesModerate, policy =>
+            {
+                ConfigureBackofficePolicy(policy, options, ApiPermissions.CommunitiesModerate);
             });
 
         return services;

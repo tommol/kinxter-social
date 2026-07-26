@@ -74,7 +74,7 @@ export async function completeLogin(request: NextRequest) {
     );
     const locale = normalizeLocale(request.cookies.get(localeCookie)?.value);
     const response = NextResponse.redirect(
-      new URL(locale ? `/${locale}` : "/", request.nextUrl.origin),
+      new URL(locale ? `/${locale}/onboarding` : "/en/onboarding", request.nextUrl.origin),
     );
     const sessionOptions = getSessionCookieOptions(tokens.expires_in ?? 3600);
 

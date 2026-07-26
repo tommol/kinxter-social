@@ -1,4 +1,6 @@
 using Kinxter.Auth.Infrastructure.Persistence;
+using Kinxter.Auth.Email;
+using Kinxter.Auth.Rendering;
 using Microsoft.AspNetCore.Identity;
 
 namespace Kinxter.Auth;
@@ -8,8 +10,9 @@ internal static partial class AccountEndpoints
     private static async Task<IResult> RegisterAsync(
         HttpContext context,
         UserManager<AuthUser> userManager,
-        SignInManager<AuthUser> signInManager,
+        AuthDbContext dbContext,
         AuthIntegrationEventPublisher eventPublisher,
+        EmailConfirmationService emailConfirmationService,
         AuthOptions options,
         AuthPageRenderer renderer,
         CancellationToken cancellationToken)
@@ -39,6 +42,7 @@ internal static partial class AccountEndpoints
             CreatedAt = DateTimeOffset.UtcNow
         };
 
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         var result = await userManager.CreateAsync(user, password);
 
         if (!result.Succeeded)
@@ -47,8 +51,15 @@ internal static partial class AccountEndpoints
         }
 
         await eventPublisher.PublishUserRegisteredAsync(user, cancellationToken);
-        await signInManager.SignInAsync(user, isPersistent: false);
+        await emailConfirmationService.QueueAsync(
+            user,
+            options,
+            returnUrl,
+            AuthUiText.ResolveLocale(context, returnUrl),
+            cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
-        return Results.Redirect(returnUrl);
+        return await renderer.CheckEmailAsync(context, options, email, returnUrl);
     }
 }

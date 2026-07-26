@@ -57,6 +57,9 @@ const services = [
         "kinxter-control-dev-password",
       ModuleEvents__Nats__ConsumerEnabled: "false",
       ModuleEvents__Nats__ConsumerName: "kinxter-auth",
+      Email__Host: "localhost",
+      Email__Port: "1025",
+      Email__UseTls: "false",
     },
   },
   {
@@ -110,6 +113,8 @@ try {
     await Promise.all([
       waitForPort("PostgreSQL", 15432),
       waitForPort("NATS", 4222),
+      waitForPort("Mailpit SMTP", 1025),
+      waitForPort("MinIO", 9000),
     ]);
   } else {
     console.log("Skipping infrastructure startup (--skip-infra).");

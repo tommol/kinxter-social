@@ -1,4 +1,5 @@
 using Kinxter.Accounts.Infrastructure.Persistence;
+using Kinxter.Accounts.Model;
 using Kinxter.IntegrationEvents.Identity;
 using Kinxter.Shared.Abstractions.Events;
 using Microsoft.EntityFrameworkCore;
@@ -20,19 +21,26 @@ internal sealed class IdentityUserDisabledHandler : IModuleEventHandler<Identity
     {
         ArgumentNullException.ThrowIfNull(moduleEvent);
 
+        if (await this.dbContext.InboxMessages.AnyAsync(message => message.EventId == moduleEvent.EventId, cancellationToken))
+        {
+            return;
+        }
+
         var account = await this.dbContext.Accounts
             .SingleOrDefaultAsync(current =>
                 current.IdentityProvider == KinxterAuthIdentityProvider.ForRealm(moduleEvent.Realm) &&
                 current.IdentitySubject == moduleEvent.Subject,
                 cancellationToken);
 
-        if (account is null)
+        if (account is not null)
         {
-            return;
+            account.Disable(moduleEvent.OccurredAt);
         }
 
-        account.Disable(moduleEvent.OccurredAt);
-
+        this.dbContext.InboxMessages.Add(new ProcessedAccountEvent(
+            moduleEvent.EventId,
+            nameof(IdentityUserDisabledV1),
+            moduleEvent.OccurredAt));
         await this.dbContext.SaveChangesAsync(cancellationToken);
     }
 }

@@ -11,6 +11,14 @@ public sealed record CurrentUserResponseDto(
     string? DisplayName,
     string? Bio,
     string? ProfilePictureUrl,
+    Guid? AvatarAssetId,
+    string? ProfileVisibility,
     bool AccountRequired,
     bool ProfileRequired,
-    bool OnboardingRequired);
+    bool OnboardingRequired,
+    string OnboardingStatus,
+    string OnboardingCurrentStep,
+    string InterestsStepStatus,
+    string RecommendationsStepStatus,
+    bool ConsentsRequired,
+    bool VisibilityRequired);

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:fresh": "pnpm run clean:next && node scripts/dev.mjs",
-    "dev:infra": "podman compose -f deploy/containers/docker-compose.yml up --detach postgres nats",
+    "dev:infra": "podman compose -f deploy/containers/docker-compose.yml up --detach postgres nats mailpit minio minio-init",
     "clean:next": "node scripts/clean-next.mjs",
     "clean:web": "node scripts/clean-next.mjs web",
     "clean:admin": "node scripts/clean-next.mjs admin",

@@ -4,6 +4,7 @@ using Kinxter.Profiles.Model;
 using Kinxter.Shared.Abstractions.Application;
 using Kinxter.Shared.Abstractions.Time;
 using Microsoft.EntityFrameworkCore;
+using Kinxter.Media.Contracts;
 
 namespace Kinxter.Profiles.Application.CreateCurrentProfile;
 
@@ -13,11 +14,13 @@ internal sealed class CreateCurrentProfileHandler
     private readonly AccountsDbContext accountsDbContext;
     private readonly ProfilesDbContext profilesDbContext;
     private readonly IClock clock;
+    private readonly IMediaService mediaService;
 
     public CreateCurrentProfileHandler(
         AccountsDbContext accountsDbContext,
         ProfilesDbContext profilesDbContext,
-        IClock clock)
+        IClock clock,
+        IMediaService mediaService)
     {
         ArgumentNullException.ThrowIfNull(accountsDbContext);
         ArgumentNullException.ThrowIfNull(profilesDbContext);
@@ -26,6 +29,7 @@ internal sealed class CreateCurrentProfileHandler
         this.accountsDbContext = accountsDbContext;
         this.profilesDbContext = profilesDbContext;
         this.clock = clock;
+        this.mediaService = mediaService;
     }
 
     public async Task<CreateCurrentProfileResult> HandleAsync(
@@ -39,12 +43,19 @@ internal sealed class CreateCurrentProfileHandler
             .Where(account =>
                 account.IdentityProvider == command.IdentityProvider &&
                 account.IdentitySubject == command.IdentitySubject)
+            .Where(account => account.Status == Kinxter.Accounts.Model.AccountStatus.Active)
             .Select(account => account.Id)
             .SingleOrDefaultAsync(cancellationToken);
 
         if (accountId == Guid.Empty)
         {
             return CreateCurrentProfileResult.Failure(CreateCurrentProfileStatus.AccountNotInitialized);
+        }
+
+        if (command.AvatarAssetId is Guid avatarAssetId &&
+            !await this.mediaService.IsReadyAndOwnedAsync(accountId, avatarAssetId, cancellationToken))
+        {
+            return CreateCurrentProfileResult.Failure(CreateCurrentProfileStatus.AvatarAssetNotReady);
         }
 
         var existingProfile = await this.profilesDbContext.Profiles
@@ -74,9 +85,23 @@ internal sealed class CreateCurrentProfileHandler
             command.Handle,
             command.DisplayName,
             now);
+        profile.UpdateDetails(command.Handle, command.DisplayName, command.Bio, command.AvatarAssetId, now);
 
         this.profilesDbContext.Profiles.Add(profile);
-        await this.profilesDbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await this.profilesDbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            this.profilesDbContext.ChangeTracker.Clear();
+            var concurrentlyCreated = await this.profilesDbContext.Profiles
+                .AsNoTracking()
+                .SingleOrDefaultAsync(current => current.AccountId == accountId, cancellationToken);
+            return concurrentlyCreated is null
+                ? CreateCurrentProfileResult.Failure(CreateCurrentProfileStatus.HandleAlreadyTaken)
+                : CreateCurrentProfileResult.Success(CreateCurrentProfileStatus.AlreadyCreated, concurrentlyCreated);
+        }
 
         return CreateCurrentProfileResult.Success(CreateCurrentProfileStatus.Created, profile);
     }

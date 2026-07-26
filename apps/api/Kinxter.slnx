@@ -5,6 +5,13 @@
   <Folder Name="/src/modules/">
     <Project Path="src/modules/Kinxter.Accounts/Kinxter.Accounts.csproj" />
     <Project Path="src/modules/Kinxter.Profiles/Kinxter.Profiles.csproj" />
+    <Project Path="src/modules/Kinxter.Tags/Kinxter.Tags.csproj" />
+    <Project Path="src/modules/Kinxter.Locations/Kinxter.Locations.csproj" />
+    <Project Path="src/modules/Kinxter.Communities/Kinxter.Communities.csproj" />
+    <Project Path="src/modules/Kinxter.SocialGraph/Kinxter.SocialGraph.csproj" />
+    <Project Path="src/modules/Kinxter.Recommendations/Kinxter.Recommendations.csproj" />
+    <Project Path="src/modules/Kinxter.Onboarding/Kinxter.Onboarding.csproj" />
+    <Project Path="src/modules/Kinxter.Media/Kinxter.Media.csproj" />
   </Folder>
   <Folder Name="/src/shared/">
     <Project Path="src/shared/Kinxter.IntegrationEvents/Kinxter.IntegrationEvents.csproj" />

@@ -61,7 +61,11 @@ internal static partial class OpenIddictEndpoints
 
         var user = await userManager.GetUserAsync(result.Principal);
 
-        if (user is null || user.Realm != authOptions.Realm || user.DeletedAt is not null || user.DisabledAt is not null)
+        if (user is null ||
+            user.Realm != authOptions.Realm ||
+            user.DeletedAt is not null ||
+            user.DisabledAt is not null ||
+            !user.EmailConfirmed)
         {
             await signInManager.SignOutAsync();
 

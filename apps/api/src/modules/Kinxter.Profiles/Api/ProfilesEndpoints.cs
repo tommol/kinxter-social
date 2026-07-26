@@ -18,7 +18,8 @@ public static class ProfilesEndpoints
             .WithTags("Profiles");
 
         group.MapCreateCurrentProfileEndpoint(publicUserPolicy);
-        group.MapCompleteProfileOnboardingEndpoint(publicUserPolicy);
+        group.MapUpdateCurrentProfileEndpoints(publicUserPolicy);
+        group.MapGetProfileEndpoint(publicUserPolicy);
 
         return app;
     }

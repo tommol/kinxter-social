@@ -39,6 +39,15 @@ internal static class CreateCurrentProfileEndpoint
             (nameof(request.DisplayName), request.DisplayName, Profile.DisplayNameMaxLength)
         ]);
 
+        try
+        {
+            _ = Profile.NormalizeHandle(request.Handle);
+        }
+        catch (ArgumentException exception)
+        {
+            validationErrors[nameof(request.Handle)] = [exception.Message];
+        }
+
         if (validationErrors.Count > 0)
         {
             return Results.ValidationProblem(validationErrors);
@@ -50,7 +59,9 @@ internal static class CreateCurrentProfileEndpoint
                 identity.IdentityProvider,
                 identity.Subject,
                 request.Handle,
-                request.DisplayName),
+                request.DisplayName,
+                request.Bio,
+                request.AvatarAssetId),
             cancellationToken);
 
         return result.Status switch
@@ -63,6 +74,8 @@ internal static class CreateCurrentProfileEndpoint
                 new { error = "Account is not initialized yet." }),
             CreateCurrentProfileStatus.HandleAlreadyTaken => Results.Conflict(
                 new { error = "Handle is already taken." }),
+            CreateCurrentProfileStatus.AvatarAssetNotReady => Results.Conflict(
+                new { error = "Avatar asset is not ready or does not belong to the current account." }),
             _ => throw new InvalidOperationException($"Unsupported create profile status '{result.Status}'.")
         };
     }

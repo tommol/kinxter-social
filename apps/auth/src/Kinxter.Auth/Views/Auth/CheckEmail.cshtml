@@ -1,0 +1,15 @@
+@model Kinxter.Auth.Rendering.Models.AuthCheckEmailPageViewModel
+@{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
+    Layout = "/Views/Auth/_Layout.cshtml";
+    ViewData["Title"] = text["Check your email"];
+}
+<p class="eyebrow">@text["Email verification"]</p>
+<h1>@text["Check your email"]</h1>
+<p class="lead">@text["We sent a confirmation link to your email address. Confirm it before signing in."]</p>
+<form class="auth-form" method="post" action="@Model.ResendPath">
+  <input type="hidden" name="email" value="@Model.Email">
+  <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
+  <button type="submit">@text["Send the link again"]</button>
+</form>
+<p class="switch-copy"><a href="@Model.LoginPath?returnUrl=@Model.EscapedReturnUrl">@text["Back to sign in"]</a></p>

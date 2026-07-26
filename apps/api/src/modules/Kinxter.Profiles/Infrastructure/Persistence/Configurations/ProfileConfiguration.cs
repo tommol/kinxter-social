@@ -20,11 +20,11 @@ internal sealed class ProfileConfiguration : IEntityTypeConfiguration<Profile>
 
         builder.Property(profile => profile.Handle)
             .IsRequired()
-            .HasMaxLength(Profile.HandleMaxLength);
+            .HasMaxLength(Profile.HandleStorageMaxLength);
 
         builder.Property(profile => profile.NormalizedHandle)
             .IsRequired()
-            .HasMaxLength(Profile.HandleMaxLength);
+            .HasMaxLength(Profile.HandleStorageMaxLength);
 
         builder.Property(profile => profile.DisplayName)
             .IsRequired()
@@ -35,6 +35,12 @@ internal sealed class ProfileConfiguration : IEntityTypeConfiguration<Profile>
 
         builder.Property(profile => profile.ProfilePictureUrl)
             .HasMaxLength(Profile.ProfilePictureUrlMaxLength);
+
+        builder.Property(profile => profile.AvatarAssetId);
+
+        builder.Property(profile => profile.Visibility)
+            .HasConversion<string>()
+            .HasMaxLength(32);
 
         builder.Property(profile => profile.CreatedAt)
             .IsRequired();

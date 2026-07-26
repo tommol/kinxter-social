@@ -20,7 +20,9 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Kinxter.Api/Kinxter.Api.csproj" />
     <ProjectReference Include="../../src/modules/Kinxter.Accounts/Kinxter.Accounts.csproj" />
+    <ProjectReference Include="../../src/modules/Kinxter.Onboarding/Kinxter.Onboarding.csproj" />
     <ProjectReference Include="../../src/modules/Kinxter.Profiles/Kinxter.Profiles.csproj" />
+    <ProjectReference Include="../../src/modules/Kinxter.SocialGraph/Kinxter.SocialGraph.csproj" />
     <ProjectReference Include="../../src/shared/Kinxter.Shared.Abstractions/Kinxter.Shared.Abstractions.csproj" />
   </ItemGroup>
 

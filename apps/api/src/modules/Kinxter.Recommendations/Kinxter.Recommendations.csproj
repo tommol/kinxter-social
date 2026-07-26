@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../Kinxter.Accounts/Kinxter.Accounts.csproj" /><ProjectReference Include="../Kinxter.Profiles/Kinxter.Profiles.csproj" /><ProjectReference Include="../Kinxter.Tags/Kinxter.Tags.csproj" /><ProjectReference Include="../Kinxter.Locations/Kinxter.Locations.csproj" /><ProjectReference Include="../Kinxter.Communities/Kinxter.Communities.csproj" /><ProjectReference Include="../Kinxter.SocialGraph/Kinxter.SocialGraph.csproj" /></ItemGroup>
+</Project>

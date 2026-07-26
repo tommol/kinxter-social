@@ -126,6 +126,47 @@ internal sealed class AuthRegisterPageViewModel
     public IReadOnlyList<AuthExternalLoginButtonViewModel> ExternalProviders { get; }
 }
 
+internal sealed class AuthCheckEmailPageViewModel
+{
+    public AuthCheckEmailPageViewModel(AuthOptions options, string email, string? returnUrl)
+    {
+        Email = email;
+        ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;
+        ResendPath = AuthPagePaths.AccountPath(options, "/account/resend-confirmation");
+        LoginPath = AuthPagePaths.AccountPath(options, "/account/login");
+        EscapedReturnUrl = AuthPagePaths.EscapedReturnUrl(ReturnUrl);
+    }
+
+    public string Email { get; }
+
+    public string ReturnUrl { get; }
+
+    public string ResendPath { get; }
+
+    public string LoginPath { get; }
+
+    public string EscapedReturnUrl { get; }
+}
+
+internal sealed class AuthEmailConfirmedPageViewModel
+{
+    public AuthEmailConfirmedPageViewModel(AuthOptions options, string? returnUrl, bool succeeded)
+    {
+        ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;
+        LoginPath = AuthPagePaths.AccountPath(options, "/account/login");
+        EscapedReturnUrl = AuthPagePaths.EscapedReturnUrl(ReturnUrl);
+        Succeeded = succeeded;
+    }
+
+    public string ReturnUrl { get; }
+
+    public string LoginPath { get; }
+
+    public string EscapedReturnUrl { get; }
+
+    public bool Succeeded { get; }
+}
+
 internal sealed class AuthActivateInvitationPageViewModel
 {
     public AuthActivateInvitationPageViewModel(

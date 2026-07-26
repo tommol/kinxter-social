@@ -1,4 +1,5 @@
 using Kinxter.Auth.Infrastructure.Persistence;
+using Kinxter.Auth.Email;
 using Microsoft.AspNetCore.Identity;
 
 namespace Kinxter.Auth;
@@ -8,9 +9,13 @@ internal static partial class AccountEndpoints
     private static async Task<IResult> ConfirmEmailAsync(
         string userId,
         string code,
+        string? returnUrl,
+        HttpContext context,
+        AuthDbContext dbContext,
         UserManager<AuthUser> userManager,
         AuthIntegrationEventPublisher eventPublisher,
         AuthOptions options,
+        AuthPageRenderer renderer,
         CancellationToken cancellationToken)
     {
         var user = Guid.TryParse(userId, out var parsedUserId)
@@ -19,18 +24,31 @@ internal static partial class AccountEndpoints
 
         if (user is null || user.Realm != options.Realm)
         {
-            return Results.NotFound();
+            return await renderer.EmailConfirmedAsync(context, options, returnUrl, succeeded: false);
         }
 
-        var result = await userManager.ConfirmEmailAsync(user, code);
+        if (user.EmailConfirmed)
+        {
+            return await renderer.EmailConfirmedAsync(context, options, returnUrl, succeeded: true);
+        }
+
+        if (!EmailConfirmationService.TryDecodeToken(code, out var decodedToken))
+        {
+            return await renderer.EmailConfirmedAsync(context, options, returnUrl, succeeded: false);
+        }
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var result = await userManager.ConfirmEmailAsync(user, decodedToken);
 
         if (!result.Succeeded)
         {
-            return Results.BadRequest(new { error = FormatIdentityErrors(result) });
+            return await renderer.EmailConfirmedAsync(context, options, returnUrl, succeeded: false);
         }
 
         await eventPublisher.PublishEmailConfirmedAsync(user, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
-        return Results.Ok(new { status = "confirmed" });
+        return await renderer.EmailConfirmedAsync(context, options, returnUrl, succeeded: true);
     }
 }

@@ -61,7 +61,9 @@ public sealed class KinxterApplicationsTests : IDisposable
         Assert.True(paths.TryGetProperty("/health", out _));
         Assert.True(paths.TryGetProperty("/api/v1/me", out var me) && me.TryGetProperty("get", out _));
         Assert.True(paths.TryGetProperty("/api/v1/profiles/me", out var profile) && profile.TryGetProperty("post", out _));
-        Assert.True(paths.TryGetProperty("/api/v1/profiles/me/onboarding", out var onboarding) && onboarding.TryGetProperty("put", out _));
+        Assert.True(paths.TryGetProperty("/api/v1/onboarding", out var onboarding) && onboarding.TryGetProperty("get", out _));
+        Assert.True(paths.TryGetProperty("/api/v1/onboarding/consents", out var consents) && consents.TryGetProperty("put", out _));
+        Assert.True(paths.TryGetProperty("/api/v1/onboarding/complete", out var complete) && complete.TryGetProperty("post", out _));
         Assert.True(paths.TryGetProperty("/api/v1/monitoring/overview", out var monitoring) && monitoring.TryGetProperty("get", out _));
     }
 

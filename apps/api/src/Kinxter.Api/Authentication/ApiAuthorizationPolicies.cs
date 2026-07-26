@@ -10,6 +10,8 @@ internal static class ApiAuthorizationPolicies
     public const string UsersRead = "UsersRead";
     public const string UsersManage = "UsersManage";
     public const string AdminUsersManage = "AdminUsersManage";
+    public const string TaxonomyManage = "TaxonomyManage";
+    public const string CommunitiesModerate = "CommunitiesModerate";
 }
 
 internal static class ApiPermissions
@@ -21,4 +23,6 @@ internal static class ApiPermissions
     public const string UsersRead = "users.read";
     public const string UsersManage = "users.manage";
     public const string AdminUsersManage = "admin_users.manage";
+    public const string TaxonomyManage = "taxonomy.manage";
+    public const string CommunitiesModerate = "communities.moderate";
 }

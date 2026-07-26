@@ -164,7 +164,8 @@ export default function AdminMonitoringPage() {
           <a className={`${styles.navItem} ${styles.active}`} href="/">
             Monitoring
           </a>
-          <span className={`${styles.navItem} ${styles.disabled}`}>Moderacja</span>
+          <a className={styles.navItem} href="/tags">Kinktagi</a>
+          <a className={styles.navItem} href="/communities">Społeczności</a>
         </nav>
       </aside>
 

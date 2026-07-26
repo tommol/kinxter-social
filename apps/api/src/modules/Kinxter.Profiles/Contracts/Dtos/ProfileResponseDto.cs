@@ -9,6 +9,8 @@ public sealed record ProfileResponseDto(
     string DisplayName,
     string? Bio,
     string? ProfilePictureUrl,
+    Guid? AvatarAssetId,
+    string? Visibility,
     DateTimeOffset? OnboardingCompletedAt)
 {
     public static ProfileResponseDto From(Profile profile)
@@ -22,6 +24,8 @@ public sealed record ProfileResponseDto(
             profile.DisplayName,
             profile.Bio,
             profile.ProfilePictureUrl,
+            profile.AvatarAssetId,
+            profile.Visibility?.ToString(),
             profile.OnboardingCompletedAt);
     }
 }

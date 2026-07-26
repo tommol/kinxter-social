@@ -70,6 +70,32 @@ internal sealed class AuthPageRenderer
             returnUrl);
     }
 
+    public Task<IResult> CheckEmailAsync(
+        HttpContext context,
+        AuthOptions options,
+        string email,
+        string? returnUrl)
+    {
+        return RenderResultAsync(
+            context,
+            "/Views/Auth/CheckEmail.cshtml",
+            new AuthCheckEmailPageViewModel(options, email, returnUrl),
+            returnUrl);
+    }
+
+    public Task<IResult> EmailConfirmedAsync(
+        HttpContext context,
+        AuthOptions options,
+        string? returnUrl,
+        bool succeeded)
+    {
+        return RenderResultAsync(
+            context,
+            "/Views/Auth/EmailConfirmed.cshtml",
+            new AuthEmailConfirmedPageViewModel(options, returnUrl, succeeded),
+            returnUrl);
+    }
+
     public Task<IResult> ActivateInvitationAsync(
         HttpContext context,
         AuthOptions options,

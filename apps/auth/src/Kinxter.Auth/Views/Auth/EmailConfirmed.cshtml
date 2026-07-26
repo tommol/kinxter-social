@@ -1,0 +1,19 @@
+@model Kinxter.Auth.Rendering.Models.AuthEmailConfirmedPageViewModel
+@{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
+    Layout = "/Views/Auth/_Layout.cshtml";
+    ViewData["Title"] = Model.Succeeded ? text["Email confirmed"] : text["Invalid confirmation link"];
+}
+<p class="eyebrow">@text["Email verification"]</p>
+@if (Model.Succeeded)
+{
+  <h1>@text["Email confirmed"]</h1>
+  <p class="lead">@text["Your account is ready. Sign in to continue."]</p>
+  <p><a class="button" href="@Model.LoginPath?returnUrl=@Model.EscapedReturnUrl">@text["Continue to sign in"]</a></p>
+}
+else
+{
+  <h1>@text["Invalid confirmation link"]</h1>
+  <p class="lead">@text["The link is invalid or has expired. Request a new one from the sign-in page."]</p>
+  <p><a href="@Model.LoginPath?returnUrl=@Model.EscapedReturnUrl">@text["Back to sign in"]</a></p>
+}

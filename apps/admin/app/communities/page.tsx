@@ -1,0 +1,11 @@
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import styles from "../admin.module.css";
+type Community = { id: string; slug: string; name: string; description: string; ownerProfileId: string; createdAt: string };
+export default function CommunitiesPage() {
+  const [items, setItems] = useState<Community[]>([]); const [error, setError] = useState("");
+  const load = useCallback(async () => { const response = await fetch("/api/kinxter/admin/communities/pending", { cache: "no-store" }); if (response.ok) setItems(await response.json()); else setError(`HTTP ${response.status}`); }, []);
+  useEffect(() => { void load(); }, [load]);
+  async function decide(id: string, action: "publish" | "reject") { const reason = action === "reject" ? window.prompt("Powód odrzucenia") : null; if (action === "reject" && !reason) return; await fetch(`/api/kinxter/admin/communities/${id}/${action}`, { method: "POST", headers: { "content-type": "application/json" }, body: action === "reject" ? JSON.stringify({ reason }) : undefined }); await load(); }
+  return <main className={styles.adminShell}><aside className={styles.sidebar}><div className={styles.brand}><span>K</span><div><strong>Kinxter</strong><small>Admin</small></div></div><nav className={styles.nav}><a className={styles.navItem} href="/">Monitoring</a><a className={styles.navItem} href="/tags">Kinktagi</a><a className={`${styles.navItem} ${styles.active}`} href="/communities">Społeczności</a></nav></aside><section className={styles.content}><header className={styles.topbar}><h1 className={styles.heading}>Moderacja społeczności</h1></header>{error ? <p>{error}</p> : null}<section className={styles.detailGrid}>{items.map(item => <article className={styles.panel} key={item.id} style={{ padding: 20 }}><p className={styles.eyebrow}>@{item.slug}</p><h2>{item.name}</h2><p>{item.description}</p><small>Właściciel: {item.ownerProfileId}</small><div className={styles.topbarActions} style={{ marginTop: 16 }}><button onClick={() => void decide(item.id, "publish")}>Opublikuj</button><button onClick={() => void decide(item.id, "reject")}>Odrzuć</button></div></article>)}</section>{!items.length ? <div className={styles.emptyState}>Brak społeczności oczekujących na moderację.</div> : null}</section></main>;
+}

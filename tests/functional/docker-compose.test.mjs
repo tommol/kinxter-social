@@ -128,7 +128,9 @@ test("API exposes an OpenAPI document for REST endpoints", async () => {
   assert.ok(document.paths["/health"]);
   assert.ok(document.paths["/api/v1/me"]?.get);
   assert.ok(document.paths["/api/v1/profiles/me"]?.post);
-  assert.ok(document.paths["/api/v1/profiles/me/onboarding"]?.put);
+  assert.ok(document.paths["/api/v1/onboarding"]?.get);
+  assert.ok(document.paths["/api/v1/onboarding/consents"]?.put);
+  assert.ok(document.paths["/api/v1/onboarding/complete"]?.post);
   assert.ok(document.paths["/api/v1/monitoring/overview"]?.get);
 });
 

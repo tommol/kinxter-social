@@ -96,6 +96,7 @@ internal sealed class ExternalLoginAccountManager
         }
 
         await this.eventPublisher.PublishUserRegisteredAsync(user, cancellationToken);
+        await this.dbContext.SaveChangesAsync(cancellationToken);
 
         return ExternalLoginAccountResult.Success(ExternalLoginAccountStatus.CreatedUser, user);
     }

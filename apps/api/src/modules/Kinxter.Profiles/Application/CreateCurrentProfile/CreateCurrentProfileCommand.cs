@@ -6,4 +6,6 @@ public sealed record CreateCurrentProfileCommand(
     string IdentityProvider,
     string IdentitySubject,
     string Handle,
-    string DisplayName) : ICommand<CreateCurrentProfileResult>;
+    string DisplayName,
+    string? Bio,
+    Guid? AvatarAssetId) : ICommand<CreateCurrentProfileResult>;

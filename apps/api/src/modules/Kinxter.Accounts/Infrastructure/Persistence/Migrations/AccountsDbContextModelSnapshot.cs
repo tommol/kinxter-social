@@ -79,6 +79,61 @@ namespace Kinxter.Accounts.Infrastructure.Persistence.Migrations
                     b.ToTable("accounts", "accounts");
                 });
 
+            modelBuilder.Entity("Kinxter.Accounts.Model.AccountConsent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AdultConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<string>("PrivacyVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TermsVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId", "TermsVersion", "PrivacyVersion")
+                        .IsUnique();
+
+                    b.ToTable("account_consents", "accounts");
+                });
+
+            modelBuilder.Entity("Kinxter.Accounts.Model.ProcessedAccountEvent", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("EventId");
+
+                    b.ToTable("inbox_messages", "accounts");
+                });
+
             modelBuilder.Entity("Kinxter.Shared.Abstractions.Outbox.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")

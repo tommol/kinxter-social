@@ -12,6 +12,10 @@ public class AccountsDbContext : DbContext
 
     public DbSet<Account> Accounts { get; set; } = null!;
 
+    public DbSet<AccountConsent> AccountConsents { get; set; } = null!;
+
+    public DbSet<ProcessedAccountEvent> InboxMessages { get; set; } = null!;
+
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

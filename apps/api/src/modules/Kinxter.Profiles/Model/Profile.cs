@@ -2,7 +2,9 @@ namespace Kinxter.Profiles.Model;
 
 public sealed class Profile
 {
-    public const int HandleMaxLength = 64;
+    public const int HandleMinLength = 3;
+    public const int HandleMaxLength = 32;
+    public const int HandleStorageMaxLength = 64;
     public const int DisplayNameMaxLength = 120;
     public const int BioMaxLength = 500;
     public const int ProfilePictureUrlMaxLength = 2048;
@@ -43,6 +45,10 @@ public sealed class Profile
 
     public string? ProfilePictureUrl { get; private set; }
 
+    public Guid? AvatarAssetId { get; private set; }
+
+    public ProfileVisibility? Visibility { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset? UpdatedAt { get; private set; }
@@ -81,10 +87,75 @@ public sealed class Profile
         UpdatedAt = completedAt;
     }
 
+    public void UpdateDetails(
+        string handle,
+        string displayName,
+        string? bio,
+        Guid? avatarAssetId,
+        DateTimeOffset updatedAt)
+    {
+        var updatedHandle = NormalizeRequired(handle, HandleMaxLength, nameof(handle));
+        var updatedNormalizedHandle = NormalizeHandle(updatedHandle);
+        var updatedDisplayName = NormalizeRequired(displayName, DisplayNameMaxLength, nameof(displayName));
+        var updatedBio = NormalizeOptional(bio, BioMaxLength, nameof(bio));
+
+        Handle = updatedHandle;
+        NormalizedHandle = updatedNormalizedHandle;
+        DisplayName = updatedDisplayName;
+        Bio = updatedBio;
+        AvatarAssetId = avatarAssetId;
+        ProfilePictureUrl = null;
+        UpdatedAt = updatedAt;
+    }
+
+    public void SetVisibility(ProfileVisibility visibility, DateTimeOffset updatedAt)
+    {
+        if (!Enum.IsDefined(visibility))
+        {
+            throw new ArgumentOutOfRangeException(nameof(visibility));
+        }
+
+        Visibility = visibility;
+        UpdatedAt = updatedAt;
+    }
+
+    public void MarkOnboardingCompleted(DateTimeOffset completedAt)
+    {
+        if (Visibility is null)
+        {
+            throw new InvalidOperationException("Profile visibility must be selected before onboarding completion.");
+        }
+
+        OnboardingCompletedAt ??= completedAt;
+        UpdatedAt = completedAt;
+    }
+
     public static string NormalizeHandle(string handle)
     {
-        return NormalizeRequired(handle, HandleMaxLength, nameof(handle)).ToLowerInvariant();
+        var normalized = NormalizeRequired(handle, HandleMaxLength, nameof(handle)).ToLowerInvariant();
+
+        if (normalized.Length < HandleMinLength ||
+            normalized[0] is '.' or '_' ||
+            normalized[^1] is '.' or '_' ||
+            normalized.Any(character => !(character is >= 'a' and <= 'z' or >= '0' and <= '9' or '.' or '_')))
+        {
+            throw new ArgumentException(
+                $"Handle must contain {HandleMinLength}-{HandleMaxLength} lowercase letters, numbers, dots or underscores.",
+                nameof(handle));
+        }
+
+        if (ReservedHandles.Contains(normalized))
+        {
+            throw new ArgumentException("Handle is reserved.", nameof(handle));
+        }
+
+        return normalized;
     }
+
+    private static readonly HashSet<string> ReservedHandles = new(StringComparer.Ordinal)
+    {
+        "admin", "api", "auth", "help", "kinxter", "legal", "moderation", "settings", "support"
+    };
 
     private static string? NormalizeOptional(string? value, int maxLength, string parameterName)
     {

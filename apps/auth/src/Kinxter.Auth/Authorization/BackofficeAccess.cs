@@ -19,6 +19,8 @@ internal static class AuthPermissions
     public const string UsersRead = "users.read";
     public const string UsersManage = "users.manage";
     public const string AdminUsersManage = "admin_users.manage";
+    public const string TaxonomyManage = "taxonomy.manage";
+    public const string CommunitiesModerate = "communities.moderate";
 
     public static readonly IReadOnlyList<string> All =
     [
@@ -28,7 +30,9 @@ internal static class AuthPermissions
         ModerationWrite,
         UsersRead,
         UsersManage,
-        AdminUsersManage
+        AdminUsersManage,
+        TaxonomyManage,
+        CommunitiesModerate
     ];
 }
 
@@ -63,6 +67,8 @@ internal static class AuthRoles
                 AuthPermissions.AdminAccess,
                 AuthPermissions.ModerationRead,
                 AuthPermissions.ModerationWrite,
+                AuthPermissions.TaxonomyManage,
+                AuthPermissions.CommunitiesModerate,
                 AuthPermissions.UsersRead
             ]),
         new(

@@ -7,7 +7,7 @@ internal static partial class AccountEndpoints
         var group = app.MapGroup("/account");
 
         group.MapGet("/register", GetRegisterAsync);
-        group.MapPost("/register", RegisterAsync);
+        group.MapPost("/register", RegisterAsync).RequireRateLimiting("public-auth-sensitive");
         group.MapGet("/login", GetLoginAsync);
         group.MapPost("/login", LoginAsync);
         group.MapPost("/external-login/{provider}", ExternalLoginAsync);
@@ -16,7 +16,8 @@ internal static partial class AccountEndpoints
         group.MapPost("/login-2fa", LoginTwoFactorAsync);
         group.MapPost("/logout", LogoutAsync);
         group.MapGet("/access-denied", GetAccessDeniedAsync);
-        group.MapGet("/confirm-email", ConfirmEmailAsync);
+        group.MapGet("/confirm-email", ConfirmEmailAsync).RequireRateLimiting("public-auth-sensitive");
+        group.MapPost("/resend-confirmation", ResendConfirmationAsync).RequireRateLimiting("public-auth-sensitive");
         group.MapPost("/forgot-password", ForgotPasswordAsync);
         group.MapPost("/reset-password", ResetPasswordAsync);
         group.MapGet("/activate", GetActivateInvitationAsync);
