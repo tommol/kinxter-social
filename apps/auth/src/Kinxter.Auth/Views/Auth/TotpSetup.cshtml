@@ -1,17 +1,20 @@
 @model Kinxter.Auth.Rendering.Models.AuthTotpSetupPageViewModel
 @{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
     Layout = "/Views/Auth/_Layout.cshtml";
-    ViewData["Title"] = "Authenticator app";
+    ViewData["Title"] = text["Authenticator app"];
 }
-<h1>Authenticator app</h1>
+<p class="eyebrow">@text["Protect your account"]</p>
+<h1>@text["Set up MFA"]</h1>
 @if (!string.IsNullOrWhiteSpace(Model.Error))
 {
-  <p class="error">@Model.Error</p>
+  <p class="error">@text[Model.Error]</p>
 }
-<p>Enter this key in your authenticator app, then verify a current code.</p>
+<p class="lead">@text["Enter this key in your authenticator app, then verify a current code."]</p>
 <code>@Model.Key</code>
-<form method="post">
+<form class="auth-form" method="post">
   <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
-  <label>Code <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
-  <button type="submit">Enable MFA</button>
+  <label for="code">@text["Verification code"]</label>
+  <input id="code" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required autofocus>
+  <button type="submit">@text["Enable MFA"]</button>
 </form>

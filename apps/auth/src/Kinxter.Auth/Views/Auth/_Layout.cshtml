@@ -1,32 +1,573 @@
 @{
+    var locale = ViewData["Locale"] as string ?? "en";
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(locale);
     var title = ViewData["Title"] as string ?? "Kinxter Auth";
+    var applicationUrl = ViewData["ApplicationUrl"] as string;
 }
 <!doctype html>
-<html lang="en">
+<html lang="@locale">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>@title</title>
+  <meta name="theme-color" content="#b70d1c">
+  <title>@title · Kinxter</title>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#f7f8fa;color:#182026}
-    main{max-width:440px;margin:8vh auto;padding:32px;background:#fff;border:1px solid #d8dee5;border-radius:8px}
-    h1{font-size:28px;margin:0 0 20px}
-    label{display:block;margin:14px 0 6px;font-size:14px;font-weight:600}
-    input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #c8d0d8;border-radius:6px;font:inherit}
-    button{margin-top:18px;padding:10px 14px;border:0;border-radius:6px;background:#1f6f5b;color:#fff;font-weight:700}
-    button.secondary{margin-left:8px;background:#e8eceb;color:#26342f}
-    .external-logins{display:grid;gap:8px;margin:0 0 20px}
-    .external-logins form{margin:0}
-    .external-logins button{width:100%;margin:0;background:#182026}
-    code{display:block;overflow:auto;padding:10px;border-radius:6px;background:#eef3f7}
-    .error{color:#b42318;background:#fff0ee;padding:10px;border-radius:6px}
-    dl{display:grid;grid-template-columns:96px 1fr;gap:8px}
-    dt{font-weight:700}
-    dd{margin:0;overflow-wrap:anywhere}
-    .realm-list{padding-left:20px}
+    :root {
+      color-scheme: light;
+      --orange: #ff5a0a;
+      --orange-bright: #ff7a00;
+      --red: #96051f;
+      --ink: #21100c;
+      --ink-soft: #6b4940;
+      --cream: #fff6ea;
+      --white: #fffdf9;
+      --line: rgb(61 21 11 / 14%);
+      --danger: #a90f25;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-width: 320px; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      min-height: 100svh;
+      margin: 0;
+      background: #a20b1d;
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+
+    button, a { -webkit-tap-highlight-color: transparent; }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .auth-shell {
+      position: relative;
+      isolation: isolate;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      min-height: 100svh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 47% 38%, #ff9915 0, #ff6f0a 20%, transparent 48%),
+        radial-gradient(circle at 84% 7%, #ff7200 0, transparent 34%),
+        radial-gradient(circle at 2% 62%, #bd0820 0, transparent 42%),
+        radial-gradient(circle at 100% 86%, #79001c 0, transparent 46%),
+        linear-gradient(135deg, #ba111c 0%, #f44709 38%, #f76c0b 57%, #8a001e 100%);
+    }
+
+    .auth-shell::before {
+      position: absolute;
+      z-index: -2;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitchTiles'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.26'/%3E%3C/svg%3E");
+      content: "";
+      mix-blend-mode: soft-light;
+      opacity: .34;
+      pointer-events: none;
+    }
+
+    .auth-shell::after {
+      position: absolute;
+      z-index: -1;
+      top: 12%;
+      left: 44%;
+      width: min(78vw, 980px);
+      height: 66%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgb(255 180 33 / 46%), transparent 69%);
+      content: "";
+      filter: blur(12px);
+      pointer-events: none;
+      transform: translateX(-50%);
+    }
+
+    .auth-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: min(calc(100% - 40px), 1180px);
+      min-height: 64px;
+      margin: 18px auto 0;
+      padding: 10px 18px 10px 24px;
+      border: 1px solid rgb(255 255 255 / 29%);
+      border-radius: 20px;
+      background:
+        linear-gradient(135deg, rgb(255 255 255 / 13%), rgb(79 9 7 / 24%)),
+        rgb(72 12 8 / 25%);
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 18%),
+        0 18px 44px rgb(45 0 0 / 14%);
+      color: var(--white);
+      backdrop-filter: blur(24px) saturate(140%);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -.065em;
+    }
+
+    a.brand { transition: opacity 150ms ease, transform 150ms ease; }
+    a.brand:hover { opacity: .78; transform: translateY(-1px); }
+
+    .security-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: rgb(255 255 255 / 76%);
+      font-size: .76rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .security-note svg {
+      width: 17px;
+      height: 17px;
+      stroke: currentColor;
+    }
+
+    .auth-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(370px, 470px);
+      align-items: center;
+      gap: clamp(48px, 8vw, 118px);
+      flex: 1;
+      width: min(calc(100% - 64px), 1100px);
+      margin: 0 auto;
+      padding: 34px 0 30px;
+    }
+
+    .auth-story {
+      max-width: 560px;
+      color: var(--white);
+    }
+
+    .auth-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 20px;
+      padding: 9px 14px;
+      border: 1px solid rgb(255 255 255 / 34%);
+      border-radius: 999px;
+      background: rgb(91 4 3 / 10%);
+      font-size: .67rem;
+      font-weight: 800;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .auth-pill span {
+      display: grid;
+      place-items: center;
+      min-width: 31px;
+      min-height: 20px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--ink);
+      letter-spacing: .03em;
+    }
+
+    .auth-story h2 {
+      max-width: 9ch;
+      margin: 0 0 20px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(3.4rem, 5.4vw, 5.2rem);
+      font-weight: 600;
+      letter-spacing: -.06em;
+      line-height: .91;
+    }
+
+    .auth-story > p:not(.auth-pill) {
+      max-width: 470px;
+      margin: 0;
+      color: rgb(255 253 249 / 76%);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .trust-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 34px;
+    }
+
+    .trust-item {
+      min-height: 86px;
+      padding: 14px;
+      border: 1px solid rgb(255 255 255 / 19%);
+      border-radius: 17px;
+      background: rgb(88 5 2 / 12%);
+      backdrop-filter: blur(10px);
+    }
+
+    .trust-item svg {
+      width: 20px;
+      height: 20px;
+      margin-bottom: 10px;
+      stroke: var(--white);
+    }
+
+    .trust-item span {
+      display: block;
+      color: rgb(255 255 255 / 88%);
+      font-size: .72rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .auth-card {
+      width: 100%;
+      padding: clamp(30px, 4vw, 42px);
+      border: 1px solid rgb(255 255 255 / 72%);
+      border-radius: 30px;
+      background:
+        linear-gradient(145deg, rgb(255 255 255 / 96%), rgb(255 246 234 / 92%));
+      box-shadow:
+        inset 0 1px 0 #fff,
+        0 30px 80px rgb(75 3 0 / 25%);
+      backdrop-filter: blur(24px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--orange);
+      font-size: .68rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .auth-card h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2.35rem, 4vw, 3.2rem);
+      font-weight: 600;
+      letter-spacing: -.055em;
+      line-height: .98;
+    }
+
+    .lead {
+      margin: 14px 0 26px;
+      color: var(--ink-soft);
+      font-size: .92rem;
+      line-height: 1.55;
+    }
+
+    form { margin: 0; }
+
+    .auth-form {
+      display: grid;
+      gap: 8px;
+    }
+
+    .auth-form input + label { margin-top: 9px; }
+
+    label {
+      display: grid;
+      gap: 8px;
+      color: var(--ink);
+      font-size: .78rem;
+      font-weight: 800;
+    }
+
+    input {
+      width: 100%;
+      min-height: 52px;
+      padding: 0 15px;
+      border: 1px solid rgb(73 35 25 / 20%);
+      border-radius: 14px;
+      outline: 0;
+      background: rgb(255 255 255 / 78%);
+      color: var(--ink);
+      transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+    }
+
+    input:hover { border-color: rgb(73 35 25 / 35%); }
+
+    input:focus {
+      border-color: var(--orange);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgb(255 90 10 / 13%);
+    }
+
+    button, .button-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 54px;
+      padding: 0 22px;
+      border: 1px solid transparent;
+      border-radius: 16px;
+      background: var(--ink);
+      color: var(--white);
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+    }
+
+    .auth-form > button { width: 100%; margin-top: 12px; }
+
+    button:hover, .button-link:hover {
+      background: #35150f;
+      box-shadow: 0 13px 28px rgb(48 8 0 / 20%);
+      transform: translateY(-1px);
+    }
+
+    button:focus-visible, a:focus-visible {
+      outline: 3px solid #ffb06e;
+      outline-offset: 3px;
+    }
+
+    button.secondary {
+      border-color: var(--line);
+      background: transparent;
+      color: var(--ink);
+    }
+
+    button.secondary:hover { background: #fff0df; box-shadow: none; }
+
+    .external-logins {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .external-logins button {
+      width: 100%;
+      border-color: var(--line);
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .external-logins button:hover { background: #fff5e8; }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0;
+      color: rgb(91 59 50 / 57%);
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .divider::before, .divider::after {
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+      content: "";
+    }
+
+    .switch-copy {
+      margin: 24px 0 0;
+      color: var(--ink-soft);
+      font-size: .84rem;
+      text-align: center;
+    }
+
+    .switch-copy a, .text-link {
+      color: #d83d08;
+      font-weight: 800;
+      text-decoration: underline;
+      text-decoration-color: rgb(216 61 8 / 26%);
+      text-underline-offset: 4px;
+    }
+
+    .switch-copy a:hover, .text-link:hover { text-decoration-color: currentColor; }
+
+    .error, .notice {
+      margin: 0 0 20px;
+      padding: 12px 14px;
+      border: 1px solid rgb(169 15 37 / 16%);
+      border-radius: 13px;
+      background: rgb(169 15 37 / 8%);
+      color: var(--danger);
+      font-size: .8rem;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    code {
+      display: block;
+      overflow: auto;
+      margin: 18px 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgb(255 255 255 / 66%);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .83rem;
+      overflow-wrap: anywhere;
+    }
+
+    dl {
+      display: grid;
+      grid-template-columns: minmax(76px, auto) 1fr;
+      gap: 9px 16px;
+      margin: 22px 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgb(255 255 255 / 58%);
+      font-size: .82rem;
+    }
+
+    dt { font-weight: 800; }
+    dd { margin: 0; color: var(--ink-soft); overflow-wrap: anywhere; }
+
+    .split-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .split-actions button { width: 100%; }
+
+    .realm-list {
+      display: grid;
+      gap: 10px;
+      margin: 24px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .realm-list a {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 52px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgb(255 255 255 / 62%);
+      font-weight: 800;
+    }
+
+    .realm-list a::after { content: "→"; color: var(--orange); }
+
+    .auth-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      width: min(calc(100% - 48px), 1100px);
+      margin: 0 auto;
+      padding: 0 0 20px;
+      color: rgb(255 255 255 / 58%);
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .auth-footer span:last-child { text-align: right; }
+
+    @@media (max-width: 860px) {
+      .auth-shell { overflow: auto; }
+      .auth-main {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        width: min(calc(100% - 40px), 560px);
+        padding: 32px 0;
+      }
+      .auth-story { max-width: 500px; text-align: center; justify-self: center; }
+      .auth-story h2 { max-width: 11ch; margin: 0 auto 14px; font-size: clamp(2.6rem, 9vw, 4rem); }
+      .auth-story > p:not(.auth-pill) { margin-inline: auto; }
+      .trust-list { display: none; }
+      .auth-pill { margin-bottom: 14px; }
+    }
+
+    @@media (max-width: 520px) {
+      .auth-topbar {
+        width: calc(100% - 24px);
+        min-height: 58px;
+        margin-top: 12px;
+        padding: 8px 14px 8px 18px;
+        border-radius: 17px;
+      }
+      .brand { font-size: 1.6rem; }
+      .security-note span { display: none; }
+      .auth-main { width: calc(100% - 24px); padding: 26px 0 22px; }
+      .auth-story > p:not(.auth-pill) { display: none; }
+      .auth-card { padding: 27px 22px; border-radius: 24px; }
+      .auth-card h1 { font-size: 2.35rem; }
+      .lead { margin-bottom: 22px; }
+      .auth-footer { display: block; width: calc(100% - 32px); text-align: center; line-height: 1.7; }
+      .auth-footer span { display: block; }
+      .auth-footer span:last-child { text-align: center; }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
   </style>
 </head>
 <body>
-  <main>@RenderBody()</main>
+  <div class="auth-shell">
+    <header class="auth-topbar">
+      @if (string.IsNullOrWhiteSpace(applicationUrl))
+      {
+        <span class="brand" aria-label="Kinxter">kinxter</span>
+      }
+      else
+      {
+        <a class="brand" href="@applicationUrl" aria-label="@text["Back to Kinxter"]">kinxter</a>
+      }
+      <span class="security-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" aria-hidden="true">
+          <rect x="5" y="10" width="14" height="10" rx="3"></rect>
+          <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10"></path>
+        </svg>
+        <span>@text["Secure account access"]</span>
+      </span>
+    </header>
+
+    <main class="auth-main">
+      <section class="auth-story" aria-label="@text["About Kinxter"]">
+        <p class="auth-pill">@text["Private by design"] <span>18+</span></p>
+        <h2>@text["Meet openly. Stay in control."]</h2>
+        <p>@text["A discreet space to find your people, explore at your own pace and build connections without judgement."]</p>
+
+        <div class="trust-list" aria-label="@text["Kinxter principles"]">
+          <div class="trust-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="3"></rect><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10"></path></svg>
+            <span>@text["Privacy from the start"]</span>
+          </div>
+          <div class="trust-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" aria-hidden="true"><path d="M8.5 12.5 11 15l5-6"></path><circle cx="12" cy="12" r="9"></circle></svg>
+            <span>@text["Consent and boundaries"]</span>
+          </div>
+          <div class="trust-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><circle cx="17" cy="10" r="2.5"></circle><path d="M3.5 19c.5-4 2.5-6 5.5-6s5 2 5.5 6M14 14c3.5-.5 5.5 1 6.5 4"></path></svg>
+            <span>@text["Active moderation"]</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="auth-card">
+        @RenderBody()
+      </section>
+    </main>
+
+    <footer class="auth-footer">
+      <span>© 2026 Kinxter · @text["Adults only"]</span>
+      <span>@text["Respect · Consent · Privacy"]</span>
+    </footer>
+  </div>
 </body>
 </html>

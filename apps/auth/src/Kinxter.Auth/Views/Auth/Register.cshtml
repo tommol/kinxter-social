@@ -1,19 +1,23 @@
 @model Kinxter.Auth.Rendering.Models.AuthRegisterPageViewModel
 @{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
     Layout = "/Views/Auth/_Layout.cshtml";
-    ViewData["Title"] = Model.SignupEnabled ? "Create account" : "Signup disabled";
+    ViewData["Title"] = Model.SignupEnabled ? text["Create account"] : text["Signup disabled"];
 }
 @if (!Model.SignupEnabled)
 {
-  <h1>Signup disabled</h1>
-  <p>This realm does not allow self-service registration.</p>
+  <p class="eyebrow">@text["Registration"]</p>
+  <h1>@text["Signup disabled"]</h1>
+  <p class="lead">@text["This space does not currently allow self-service registration."]</p>
 }
 else
 {
-  <h1>Create account</h1>
+  <p class="eyebrow">@text["Join at your pace"]</p>
+  <h1>@text["Create account"]</h1>
+  <p class="lead">@text["Start with only the essentials. You decide what to share later."]</p>
   @if (!string.IsNullOrWhiteSpace(Model.Error))
   {
-    <p class="error">@Model.Error</p>
+    <p class="error">@text[Model.Error]</p>
   }
   @if (Model.ExternalProviders.Count > 0)
   {
@@ -22,16 +26,19 @@ else
     {
       <form method="post" action="@provider.ActionPath">
         <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
-        <button type="submit">Continue with @provider.DisplayName</button>
+        <button type="submit">@text.Format("Continue with {0}", provider.DisplayName)</button>
       </form>
     }
     </div>
+    <div class="divider">@text["or use email"]</div>
   }
-  <form method="post">
+  <form class="auth-form" method="post">
     <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
-    <label>Email <input type="email" name="email" autocomplete="email" required></label>
-    <label>Password <input type="password" name="password" autocomplete="new-password" required></label>
-    <button type="submit">Create account</button>
+    <label for="email">@text["Email"]</label>
+    <input id="email" type="email" name="email" autocomplete="email" required autofocus>
+    <label for="password">@text["Password"]</label>
+    <input id="password" type="password" name="password" autocomplete="new-password" required>
+    <button type="submit">@text["Create account"]</button>
   </form>
-  <p><a href="@Model.LoginPath?returnUrl=@Model.EscapedReturnUrl">Sign in</a></p>
+  <p class="switch-copy">@text["Already have an account?"] <a href="@Model.LoginPath?returnUrl=@Model.EscapedReturnUrl">@text["Sign in"]</a></p>
 }

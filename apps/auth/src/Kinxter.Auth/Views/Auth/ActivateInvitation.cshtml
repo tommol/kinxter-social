@@ -1,27 +1,32 @@
 @model Kinxter.Auth.Rendering.Models.AuthActivateInvitationPageViewModel
 @{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
     Layout = "/Views/Auth/_Layout.cshtml";
-    ViewData["Title"] = Model.Completed ? "Account activated" : "Activate backoffice account";
+    ViewData["Title"] = Model.Completed ? text["Account activated"] : text["Activate backoffice account"];
 }
 @if (Model.Completed)
 {
-  <h1>Account activated</h1>
-  <p>Your password has been set. Sign in to configure the required multi-factor authentication.</p>
-  <p><a href="@Model.LoginPath">Continue to sign in</a></p>
+  <p class="eyebrow">@text["Account ready"]</p>
+  <h1>@text["Account activated"]</h1>
+  <p class="lead">@text["Your password has been set. Sign in to configure the required multi-factor authentication."]</p>
+  <a class="button-link" href="@Model.LoginPath">@text["Continue to sign in"]</a>
 }
 else
 {
-  <h1>Activate backoffice account</h1>
-  <p>Set a password for <strong>@Model.Email</strong>. MFA setup will be required during your first sign-in.</p>
+  <p class="eyebrow">@text["Secure invitation"]</p>
+  <h1>@text["Activate backoffice account"]</h1>
+  <p class="lead">@text.Format("Set a password for {0}. MFA setup will be required during your first sign-in.", Model.Email)</p>
   @if (!string.IsNullOrWhiteSpace(Model.Error))
   {
-    <p class="error">@Model.Error</p>
+    <p class="error">@text[Model.Error]</p>
   }
-  <form method="post" action="@Model.ActivationPath">
+  <form class="auth-form" method="post" action="@Model.ActivationPath">
     <input type="hidden" name="email" value="@Model.Email">
     <input type="hidden" name="token" value="@Model.Token">
-    <label>Password <input type="password" name="password" autocomplete="new-password" required></label>
-    <label>Confirm password <input type="password" name="confirmPassword" autocomplete="new-password" required></label>
-    <button type="submit">Activate account</button>
+    <label for="password">@text["Password"]</label>
+    <input id="password" type="password" name="password" autocomplete="new-password" required autofocus>
+    <label for="confirmPassword">@text["Confirm password"]</label>
+    <input id="confirmPassword" type="password" name="confirmPassword" autocomplete="new-password" required>
+    <button type="submit">@text["Activate account"]</button>
   </form>
 }

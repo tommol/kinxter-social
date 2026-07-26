@@ -56,10 +56,7 @@ internal static partial class OpenIddictEndpoints
                     }));
             }
 
-            return Results.Challenge(new AuthenticationProperties
-            {
-                RedirectUri = context.Request.GetEncodedUrl()
-            });
+            return CreateAccountEntryResult(context, request, authOptions);
         }
 
         var user = await userManager.GetUserAsync(result.Principal);
@@ -68,10 +65,7 @@ internal static partial class OpenIddictEndpoints
         {
             await signInManager.SignOutAsync();
 
-            return Results.Challenge(new AuthenticationProperties
-            {
-                RedirectUri = context.Request.GetEncodedUrl()
-            });
+            return CreateAccountEntryResult(context, request, authOptions);
         }
 
         if (authOptions.RequiresMfa && !user.TwoFactorEnabled)
@@ -85,5 +79,26 @@ internal static partial class OpenIddictEndpoints
             principal,
             properties: null,
             authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+    }
+
+    private static IResult CreateAccountEntryResult(
+        HttpContext context,
+        OpenIddictRequest request,
+        AuthOptions authOptions)
+    {
+        var returnUrl = context.Request.GetEncodedUrl();
+        var screenHint = request.GetParameter("screen_hint").ToString();
+
+        if (authOptions.SignupEnabled &&
+            string.Equals(screenHint, "signup", StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.Redirect(
+                $"{context.Request.PathBase}/account/register?returnUrl={Uri.EscapeDataString(returnUrl)}");
+        }
+
+        return Results.Challenge(new AuthenticationProperties
+        {
+            RedirectUri = returnUrl
+        });
     }
 }

@@ -1,12 +1,15 @@
 @model Kinxter.Auth.Rendering.Models.AuthLoginPageViewModel
 @{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
     Layout = "/Views/Auth/_Layout.cshtml";
-    ViewData["Title"] = "Sign in";
+    ViewData["Title"] = text["Sign in"];
 }
-<h1>Sign in</h1>
+<p class="eyebrow">@text["Welcome back"]</p>
+<h1>@text["Sign in"]</h1>
+<p class="lead">@text["Continue to your private Kinxter space."]</p>
 @if (!string.IsNullOrWhiteSpace(Model.Error))
 {
-  <p class="error">@Model.Error</p>
+  <p class="error">@text[Model.Error]</p>
 }
 @if (Model.ExternalProviders.Count > 0)
 {
@@ -15,18 +18,21 @@
   {
     <form method="post" action="@provider.ActionPath">
       <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
-      <button type="submit">Continue with @provider.DisplayName</button>
+      <button type="submit">@text.Format("Continue with {0}", provider.DisplayName)</button>
     </form>
   }
   </div>
+  <div class="divider">@text["or use email"]</div>
 }
-<form method="post">
+<form class="auth-form" method="post">
   <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
-  <label>Email <input type="email" name="email" autocomplete="email" required></label>
-  <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
-  <button type="submit">Sign in</button>
+  <label for="email">@text["Email"]</label>
+  <input id="email" type="email" name="email" autocomplete="email" required autofocus>
+  <label for="password">@text["Password"]</label>
+  <input id="password" type="password" name="password" autocomplete="current-password" required>
+  <button type="submit">@text["Sign in"]</button>
 </form>
 @if (Model.SignupEnabled)
 {
-  <p><a href="@Model.RegisterPath?returnUrl=@Model.EscapedReturnUrl">Create account</a></p>
+  <p class="switch-copy">@text["New to Kinxter?"] <a href="@Model.RegisterPath?returnUrl=@Model.EscapedReturnUrl">@text["Create an account"]</a></p>
 }

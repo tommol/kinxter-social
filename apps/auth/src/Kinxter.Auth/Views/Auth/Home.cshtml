@@ -1,9 +1,12 @@
 @model Kinxter.Auth.Rendering.Models.AuthServerHomeViewModel
 @{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
     Layout = "/Views/Auth/_Layout.cshtml";
     ViewData["Title"] = "Kinxter Auth";
 }
+<p class="eyebrow">@text["Identity service"]</p>
 <h1>Kinxter Auth</h1>
+<p class="lead">@text["Choose the account space you want to access."]</p>
 <ul class="realm-list">
 @foreach (var realm in Model.Realms)
 {

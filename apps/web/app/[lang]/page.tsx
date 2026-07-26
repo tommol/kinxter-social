@@ -7,8 +7,6 @@ import { getDictionary, hasLocale } from "../../i18n/dictionaries";
 import type { Dictionary } from "../../i18n/dictionaries";
 import { locales } from "../../i18n/config";
 
-const loginHref = "/api/auth/login";
-
 type HomePageProps = {
   params: Promise<{ lang: string }>;
 };
@@ -46,6 +44,8 @@ export default async function Home({ params }: HomePageProps) {
 
   const { home } = await getDictionary(lang);
   const safetyIcons: IconName[] = ["lock", "handshake", "people"];
+  const loginHref = `/api/auth/login?lang=${lang}`;
+  const registerHref = `${loginHref}&screen=register`;
 
   return (
     <main className="landingShell">
@@ -72,7 +72,7 @@ export default async function Home({ params }: HomePageProps) {
           <a className="loginLink" href={loginHref}>
             {home.header.login}
           </a>
-          <a className="button buttonLight buttonCompact" href={loginHref}>
+          <a className="button buttonLight buttonCompact" href={registerHref}>
             {home.header.join}
           </a>
         </div>
@@ -88,7 +88,7 @@ export default async function Home({ params }: HomePageProps) {
               <h1 id="hero-title">{home.hero.title}</h1>
               <p className="heroSummary">{home.hero.summary}</p>
               <div className="heroActions">
-                <a className="button buttonDark" href={loginHref}>
+                <a className="button buttonDark" href={registerHref}>
                   {home.hero.join}
                 </a>
                 <a className="button buttonLight" href="#safety">
@@ -129,7 +129,7 @@ export default async function Home({ params }: HomePageProps) {
               <p className="sectionEyebrow">{home.join.eyebrow}</p>
               <h2 id="join-title">{home.join.title}</h2>
               <p>{home.join.summary}</p>
-              <a className="button buttonOrange" href={loginHref}>
+              <a className="button buttonOrange" href={registerHref}>
                 {home.join.createAccount}
               </a>
             </div>

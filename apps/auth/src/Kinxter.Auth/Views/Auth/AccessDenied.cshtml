@@ -1,6 +1,8 @@
 @{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
     Layout = "/Views/Auth/_Layout.cshtml";
-    ViewData["Title"] = "Access denied";
+    ViewData["Title"] = text["Access denied"];
 }
-<h1>Access denied</h1>
-<p>Your account cannot access this resource.</p>
+<p class="eyebrow">@text["Account security"]</p>
+<h1>@text["Access denied"]</h1>
+<p class="lead">@text["Your account cannot access this resource."]</p>

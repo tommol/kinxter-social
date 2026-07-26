@@ -1,19 +1,22 @@
 @model Kinxter.Auth.Rendering.Models.AuthRealmHomeViewModel
 @{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
     Layout = "/Views/Auth/_Layout.cshtml";
     ViewData["Title"] = "Kinxter Auth";
 }
+<p class="eyebrow">@text["Identity service"]</p>
 <h1>Kinxter Auth</h1>
+<p class="lead">@text["Secure account access for this Kinxter space."]</p>
 <dl>
-  <dt>Realm</dt><dd>@Model.Realm</dd>
-  <dt>Issuer</dt><dd>@Model.Issuer</dd>
-  <dt>MFA policy</dt><dd>@Model.MfaPolicy</dd>
+  <dt>@text["Realm"]</dt><dd>@Model.Realm</dd>
+  <dt>@text["Issuer"]</dt><dd>@Model.Issuer</dd>
+  <dt>@text["MFA policy"]</dt><dd>@Model.MfaPolicy</dd>
 </dl>
-<p>
-  <a href="@Model.LoginPath">Sign in</a>
+<p class="switch-copy">
+  <a href="@Model.LoginPath">@text["Sign in"]</a>
   @if (Model.SignupEnabled)
   {
     <span>|</span>
-    <a href="@Model.RegisterPath">Create account</a>
+    <a href="@Model.RegisterPath">@text["Create account"]</a>
   }
 </p>

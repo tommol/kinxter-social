@@ -7,6 +7,8 @@ const nonceCookie = "kinxter_auth_nonce";
 const accessTokenCookie = "kinxter_access_token";
 const refreshTokenCookie = "kinxter_refresh_token";
 const idTokenCookie = "kinxter_id_token";
+const localeCookie = "kinxter_auth_locale";
+const supportedLocales = new Set(["pl", "en"]);
 
 let cachedConfiguration:
   | { key: string; value: Promise<oidc.Configuration> }
@@ -22,6 +24,9 @@ export async function startLogin(request: NextRequest, scopes: string[]) {
   const verifier = oidc.randomPKCECodeVerifier();
   const nonce = oidc.randomNonce();
   const challenge = await oidc.calculatePKCECodeChallenge(verifier);
+  const locale = getRequestedLocale(request);
+  const registrationRequested =
+    request.nextUrl.searchParams.get("screen") === "register";
   const authorizeUrl = oidc.buildAuthorizationUrl(configuration, {
     redirect_uri: getRedirectUri(request),
     response_type: "code",
@@ -30,6 +35,8 @@ export async function startLogin(request: NextRequest, scopes: string[]) {
     nonce,
     code_challenge: challenge,
     code_challenge_method: "S256",
+    ...(locale ? { ui_locales: locale } : {}),
+    ...(registrationRequested ? { screen_hint: "signup" } : {}),
   });
   const response = NextResponse.redirect(authorizeUrl);
   const cookieOptions = getTransientCookieOptions();
@@ -37,6 +44,9 @@ export async function startLogin(request: NextRequest, scopes: string[]) {
   response.cookies.set(stateCookie, state, cookieOptions);
   response.cookies.set(verifierCookie, verifier, cookieOptions);
   response.cookies.set(nonceCookie, nonce, cookieOptions);
+  if (locale) {
+    response.cookies.set(localeCookie, locale, cookieOptions);
+  }
 
   return response;
 }
@@ -62,7 +72,10 @@ export async function completeLogin(request: NextRequest) {
         idTokenExpected: true,
       },
     );
-    const response = NextResponse.redirect(new URL("/", request.nextUrl.origin));
+    const locale = normalizeLocale(request.cookies.get(localeCookie)?.value);
+    const response = NextResponse.redirect(
+      new URL(locale ? `/${locale}` : "/", request.nextUrl.origin),
+    );
     const sessionOptions = getSessionCookieOptions(tokens.expires_in ?? 3600);
 
     clearTransientCookies(response);
@@ -192,6 +205,21 @@ function clearTransientCookies(response: NextResponse) {
   response.cookies.delete(stateCookie);
   response.cookies.delete(verifierCookie);
   response.cookies.delete(nonceCookie);
+  response.cookies.delete(localeCookie);
+}
+
+function getRequestedLocale(request: NextRequest) {
+  return normalizeLocale(request.nextUrl.searchParams.get("lang"));
+}
+
+function normalizeLocale(locale: string | null | undefined) {
+  if (!locale) {
+    return null;
+  }
+
+  const normalized = locale.trim().toLowerCase().split("-")[0];
+
+  return supportedLocales.has(normalized) ? normalized : null;
 }
 
 function useSecureCookies() {

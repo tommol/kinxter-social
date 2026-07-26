@@ -1,36 +1,38 @@
 @model Kinxter.Auth.Rendering.Models.AuthDeviceVerificationPageViewModel
 @{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
     Layout = "/Views/Auth/_Layout.cshtml";
-    ViewData["Title"] = "Authorize device";
+    ViewData["Title"] = text["Authorize device"];
 }
-<h1>Authorize a device</h1>
+<p class="eyebrow">@text["Device connection"]</p>
+<h1>@text["Authorize a device"]</h1>
 @if (!string.IsNullOrWhiteSpace(Model.Error))
 {
-  <p class="error">@Model.Error</p>
+  <p class="error">@text[Model.Error]</p>
 }
 @if (!Model.HasValidRequest)
 {
-  <p>Enter the code shown by the application or device.</p>
-  <form method="get" action="@Model.VerificationPath">
-    <label for="userCode">Device code</label>
+  <p class="lead">@text["Enter the code shown by the application or device."]</p>
+  <form class="auth-form" method="get" action="@Model.VerificationPath">
+    <label for="userCode">@text["Device code"]</label>
     <input id="userCode" name="user_code" value="@Model.UserCode" autocomplete="one-time-code" required autofocus>
-    <button type="submit">Continue</button>
+    <button type="submit">@text["Continue"]</button>
   </form>
 }
 else
 {
-  <p><strong>@Model.ApplicationName</strong> is requesting access to this account.</p>
+  <p class="lead">@text.Format("{0} is requesting access to this account.", Model.ApplicationName)</p>
   <dl>
-    <dt>Code</dt>
+    <dt>@text["Code"]</dt>
     <dd><code>@Model.UserCode</code></dd>
-    <dt>Scopes</dt>
-    <dd>@(Model.Scopes.Length == 0 ? "No additional scopes" : string.Join(", ", Model.Scopes))</dd>
+    <dt>@text["Scopes"]</dt>
+    <dd>@(Model.Scopes.Length == 0 ? text["No additional scopes"] : string.Join(", ", Model.Scopes))</dd>
   </dl>
-  <p>Confirm only if this code exactly matches the code displayed on your device.</p>
-  <form method="post" action="@Model.VerificationPath">
+  <p>@text["Confirm only if this code exactly matches the code displayed on your device."]</p>
+  <form class="split-actions" method="post" action="@Model.VerificationPath">
     <input type="hidden" name="__RequestVerificationToken" value="@Model.AntiforgeryToken">
     <input type="hidden" name="user_code" value="@Model.UserCode">
-    <button type="submit" name="decision" value="accept">Authorize</button>
-    <button class="secondary" type="submit" name="decision" value="deny">Deny</button>
+    <button type="submit" name="decision" value="accept">@text["Authorize"]</button>
+    <button class="secondary" type="submit" name="decision" value="deny">@text["Deny"]</button>
   </form>
 }

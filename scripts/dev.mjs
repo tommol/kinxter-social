@@ -32,6 +32,12 @@ const sharedDotnetEnvironment = {
   ModuleEvents__Transport: "Nats",
   ModuleEvents__Nats__Url: "nats://localhost:4222",
 };
+const publicAuthIssuer =
+  process.env.AUTH_ISSUER ??
+  "http://localhost:8081/realms/kinxter";
+const backofficeAuthIssuer =
+  process.env.ADMIN_AUTH_ISSUER ??
+  "http://localhost:8081/realms/kinxter-admin";
 
 const services = [
   {
@@ -39,6 +45,10 @@ const services = [
     script: "auth:watch",
     environment: {
       ...sharedDotnetEnvironment,
+      Auth__Realms__0__Issuer: publicAuthIssuer,
+      Auth__Realms__0__PathBase: getPathBase(publicAuthIssuer),
+      Auth__Realms__1__Issuer: backofficeAuthIssuer,
+      Auth__Realms__1__PathBase: getPathBase(backofficeAuthIssuer),
       AuthAdmin__Enabled: process.env.AuthAdmin__Enabled ?? "true",
       AuthAdmin__Bootstrap__Username:
         process.env.AuthAdmin__Bootstrap__Username ?? "admin",
@@ -54,6 +64,8 @@ const services = [
     script: "api:watch",
     environment: {
       ...sharedDotnetEnvironment,
+      Auth__PublicIssuer: publicAuthIssuer,
+      Auth__BackofficeIssuer: backofficeAuthIssuer,
       ModuleEvents__Nats__ConsumerEnabled: "true",
       ModuleEvents__Nats__ConsumerName: "kinxter-api",
     },
@@ -62,9 +74,7 @@ const services = [
     name: "web",
     script: "web:dev",
     environment: {
-      AUTH_ISSUER:
-        process.env.AUTH_ISSUER ??
-        "http://localhost:8081/realms/public",
+      AUTH_ISSUER: publicAuthIssuer,
       AUTH_CLIENT_ID: process.env.AUTH_CLIENT_ID ?? "kinxter-web",
       AUTH_CLIENT_SECRET:
         process.env.AUTH_CLIENT_SECRET ?? "kinxter-web-dev-secret",
@@ -80,9 +90,7 @@ const services = [
     name: "admin",
     script: "admin:dev",
     environment: {
-      AUTH_ISSUER:
-        process.env.ADMIN_AUTH_ISSUER ??
-        "http://localhost:8081/realms/backoffice",
+      AUTH_ISSUER: backofficeAuthIssuer,
       AUTH_CLIENT_ID:
         process.env.ADMIN_AUTH_CLIENT_ID ?? "kinxter-admin",
       AUTH_CLIENT_SECRET:
@@ -120,7 +128,7 @@ console.log(
     "  web  http://localhost:3000",
     "  admin http://localhost:3001",
     "  API  http://localhost:8080",
-    "  auth http://localhost:8081/realms/public",
+    `  auth ${publicAuthIssuer}`,
     "  auth control http://localhost:8081/control",
     "",
     "Press Ctrl+C to stop the applications.",
@@ -244,6 +252,12 @@ function canConnect(port) {
       resolveConnection(false);
     });
   });
+}
+
+function getPathBase(issuer) {
+  const pathBase = new URL(issuer).pathname.replace(/\/$/, "");
+
+  return pathBase || "/";
 }
 
 function pipeWithPrefix(source, destination, name) {

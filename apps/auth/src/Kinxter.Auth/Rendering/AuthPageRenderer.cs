@@ -1,4 +1,5 @@
 using System.Globalization;
+using Kinxter.Auth.Rendering;
 using Kinxter.Auth.Rendering.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -49,7 +50,11 @@ internal sealed class AuthPageRenderer
         string? returnUrl,
         string? error = null)
     {
-        return RenderResultAsync(context, "/Views/Auth/Login.cshtml", new AuthLoginPageViewModel(options, returnUrl, error));
+        return RenderResultAsync(
+            context,
+            "/Views/Auth/Login.cshtml",
+            new AuthLoginPageViewModel(options, returnUrl, error),
+            returnUrl);
     }
 
     public Task<IResult> RegisterAsync(
@@ -58,7 +63,11 @@ internal sealed class AuthPageRenderer
         string? returnUrl,
         string? error = null)
     {
-        return RenderResultAsync(context, "/Views/Auth/Register.cshtml", new AuthRegisterPageViewModel(options, returnUrl, error));
+        return RenderResultAsync(
+            context,
+            "/Views/Auth/Register.cshtml",
+            new AuthRegisterPageViewModel(options, returnUrl, error),
+            returnUrl);
     }
 
     public Task<IResult> ActivateInvitationAsync(
@@ -80,7 +89,11 @@ internal sealed class AuthPageRenderer
         string? returnUrl,
         string? error = null)
     {
-        return RenderResultAsync(context, "/Views/Auth/LoginTwoFactor.cshtml", new AuthLoginTwoFactorPageViewModel(returnUrl, error));
+        return RenderResultAsync(
+            context,
+            "/Views/Auth/LoginTwoFactor.cshtml",
+            new AuthLoginTwoFactorPageViewModel(returnUrl, error),
+            returnUrl);
     }
 
     public Task<IResult> TotpSetupAsync(
@@ -89,7 +102,11 @@ internal sealed class AuthPageRenderer
         string? returnUrl,
         string? error = null)
     {
-        return RenderResultAsync(context, "/Views/Auth/TotpSetup.cshtml", new AuthTotpSetupPageViewModel(key, returnUrl, error));
+        return RenderResultAsync(
+            context,
+            "/Views/Auth/TotpSetup.cshtml",
+            new AuthTotpSetupPageViewModel(key, returnUrl, error),
+            returnUrl);
     }
 
     public Task<IResult> AccessDeniedAsync(HttpContext context)
@@ -110,9 +127,10 @@ internal sealed class AuthPageRenderer
     private async Task<IResult> RenderResultAsync<TModel>(
         HttpContext context,
         string viewPath,
-        TModel model)
+        TModel model,
+        string? localeReturnUrl = null)
     {
-        var html = await RenderAsync(context, viewPath, model);
+        var html = await RenderAsync(context, viewPath, model, localeReturnUrl);
 
         return Results.Content(html, HtmlContentType);
     }
@@ -120,7 +138,8 @@ internal sealed class AuthPageRenderer
     private async Task<string> RenderAsync<TModel>(
         HttpContext context,
         string viewPath,
-        TModel model)
+        TModel model,
+        string? localeReturnUrl)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -147,6 +166,11 @@ internal sealed class AuthPageRenderer
         {
             Model = model
         };
+        viewData["ApplicationUrl"] = context
+            .GetAuthRealmOptions()?
+            .AllowedOrigins
+            .FirstOrDefault();
+        viewData["Locale"] = AuthUiText.ResolveLocale(context, localeReturnUrl);
         var tempData = new TempDataDictionary(context, this.tempDataProvider);
         var viewContext = new ViewContext(
             actionContext,

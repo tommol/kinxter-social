@@ -88,7 +88,7 @@ client, changing its type to confidential, or rotating its secret. Web
 applications also need the realm issuer and client ID:
 
 ```dotenv
-AUTH_ISSUER=http://localhost:8081/realms/public
+AUTH_ISSUER=http://localhost:8081/realms/kinxter
 AUTH_CLIENT_ID=kinxter-web
 AUTH_CLIENT_SECRET=copy-the-value-shown-by-control
 ```
@@ -101,6 +101,12 @@ The Next.js web and admin applications use `openid-client` for OIDC discovery,
 Authorization Code with PKCE, callback and ID Token validation, and
 RP-Initiated Logout. Client IDs are stable and cannot be renamed in the panel;
 create a replacement registration when a new identifier is needed.
+
+Interactive authorization requests may include the standard `ui_locales`
+parameter (`pl` or `en`). Kinxter.Auth keeps that locale across login,
+registration, validation errors, and MFA screens. The public web client also
+uses `screen_hint=signup` when a user selects a registration CTA so the same
+PKCE authorization flow opens on account creation instead of sign-in.
 
 OAuth-only machine clients may omit the `openid` scope. A typical token request
 for a confidential Client Credentials client is:

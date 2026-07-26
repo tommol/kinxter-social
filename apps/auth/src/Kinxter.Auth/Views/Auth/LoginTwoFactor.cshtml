@@ -1,15 +1,19 @@
 @model Kinxter.Auth.Rendering.Models.AuthLoginTwoFactorPageViewModel
 @{
+    var text = Kinxter.Auth.Rendering.AuthUiText.For(ViewData["Locale"] as string);
     Layout = "/Views/Auth/_Layout.cshtml";
-    ViewData["Title"] = "Two-factor authentication";
+    ViewData["Title"] = text["Two-factor authentication"];
 }
-<h1>Two-factor authentication</h1>
+<p class="eyebrow">@text["One more step"]</p>
+<h1>@text["Verify it’s you"]</h1>
+<p class="lead">@text["Enter the current code from your authenticator app."]</p>
 @if (!string.IsNullOrWhiteSpace(Model.Error))
 {
-  <p class="error">@Model.Error</p>
+  <p class="error">@text[Model.Error]</p>
 }
-<form method="post">
+<form class="auth-form" method="post">
   <input type="hidden" name="returnUrl" value="@Model.ReturnUrl">
-  <label>Authenticator code <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
-  <button type="submit">Verify</button>
+  <label for="code">@text["Authenticator code"]</label>
+  <input id="code" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required autofocus>
+  <button type="submit">@text["Verify"]</button>
 </form>
