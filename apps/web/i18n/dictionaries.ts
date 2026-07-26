@@ -8,6 +8,7 @@ export type Dictionary = typeof polishDictionary;
 
 const dictionaries: Record<Locale, () => Promise<Dictionary>> = {
   pl: () => import("./dictionaries/pl.json").then((module) => module.default),
+  en: () => import("./dictionaries/en.json").then((module) => module.default),
 };
 
 export function hasLocale(locale: string): locale is Locale {

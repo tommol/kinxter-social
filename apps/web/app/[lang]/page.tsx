@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PanelHashNavigation } from "../panel-hash-navigation";
+import { SiteFooter } from "./site-footer";
 import { getDictionary, hasLocale } from "../../i18n/dictionaries";
 import type { Dictionary } from "../../i18n/dictionaries";
+import { locales } from "../../i18n/config";
 
 const loginHref = "/api/auth/login";
 
@@ -24,7 +26,15 @@ export async function generateMetadata({
 
   const dictionary = await getDictionary(lang);
 
-  return dictionary.home.metadata;
+  return {
+    ...dictionary.home.metadata,
+    alternates: {
+      canonical: `/${lang}`,
+      languages: Object.fromEntries(
+        locales.map((locale) => [locale, `/${locale}`]),
+      ),
+    },
+  };
 }
 
 export default async function Home({ params }: HomePageProps) {
@@ -252,67 +262,6 @@ function PanelNavigation({
         ) : null}
       </div>
     </nav>
-  );
-}
-
-function SiteFooter({
-  home,
-  lang,
-}: {
-  home: HomeDictionary;
-  lang: string;
-}) {
-  return (
-    <footer className="siteFooter">
-      <div className="footerTop">
-        <div className="footerBrand">
-          <a className="brand" href="#start">
-            kinxter
-          </a>
-          <p>{home.footer.description}</p>
-          <span>{home.footer.values}</span>
-        </div>
-
-        <nav className="footerColumn" aria-label={home.footer.kinxterAriaLabel}>
-          <h3>{home.footer.kinxterTitle}</h3>
-          <a href="#start">{home.footer.about}</a>
-          <a href="#join">{home.footer.communities}</a>
-          <a href="#safety">{home.footer.safety}</a>
-          <a href="mailto:hello@kinxter.com">{home.footer.contact}</a>
-        </nav>
-
-        <nav className="footerColumn" aria-label={home.footer.documentsAriaLabel}>
-          <h3>{home.footer.documentsTitle}</h3>
-          <a href={`/${lang}/legal#privacy`}>{home.footer.privacy}</a>
-          <a href={`/${lang}/legal#terms`}>{home.footer.terms}</a>
-          <a href={`/${lang}/legal#cookies`}>{home.footer.cookies}</a>
-          <a href={`/${lang}/legal#community`}>{home.footer.communityRules}</a>
-        </nav>
-
-        <div className="footerColumn languageColumn">
-          <h3>{home.footer.language}</h3>
-          <a
-            className="activeLanguage"
-            href={`/${lang}`}
-            hrefLang={lang}
-            aria-current="page"
-          >
-            {home.footer.polish}
-          </a>
-          <span>
-            {home.footer.english} <small>{home.footer.soon}</small>
-          </span>
-          <span>
-            {home.footer.german} <small>{home.footer.soon}</small>
-          </span>
-        </div>
-      </div>
-
-      <div className="footerBottom">
-        <span>© {new Date().getFullYear()} Kinxter</span>
-        <span>{home.footer.adultsOnly}</span>
-      </div>
-    </footer>
   );
 }
 

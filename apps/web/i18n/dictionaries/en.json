@@ -1,0 +1,148 @@
+{
+  "home": {
+    "metadata": {
+      "title": "Kinxter — a community without judgment",
+      "description": "A private social platform for adults in kink and fetish communities."
+    },
+    "header": {
+      "brandAriaLabel": "Kinxter — home page",
+      "navigationAriaLabel": "Main navigation",
+      "discover": "Discover",
+      "communities": "Communities",
+      "safety": "Safety",
+      "login": "Sign in",
+      "join": "Join now"
+    },
+    "hero": {
+      "eyebrow": "A space for adults 18+",
+      "title": "Find people you can truly be yourself with.",
+      "summary": "A discreet space to meet people, explore who you are, and build community without judgment.",
+      "join": "Join discreetly",
+      "safety": "How we keep you safe"
+    },
+    "trust": {
+      "ariaLabel": "Kinxter's core principles",
+      "privacy": "Privacy from the start",
+      "consent": "Consent and boundaries",
+      "moderation": "Moderated community"
+    },
+    "join": {
+      "eyebrow": "Start at your own pace",
+      "title": "From curiosity to community.",
+      "summary": "You do not need to know everything from the start. Observe, meet people, and discover Kinxter in your own way.",
+      "createAccount": "Create an account",
+      "steps": [
+        {
+          "number": "1",
+          "title": "Create your profile",
+          "description": "Share only as much as you want."
+        },
+        {
+          "number": "2",
+          "title": "Explore",
+          "description": "Find people and communities at your own pace."
+        },
+        {
+          "number": "3",
+          "title": "Build connections",
+          "description": "Talk in a space grounded in consent."
+        }
+      ],
+      "categoryIntro": "Explore communities including",
+      "categoriesAriaLabel": "Example communities",
+      "categories": [
+        "BDSM",
+        "Shibari",
+        "Fetish",
+        "Queer",
+        "Education",
+        "Events"
+      ]
+    },
+    "safety": {
+      "eyebrow": "Safety at the core",
+      "title": "Technology should protect your boundaries.",
+      "summary": "Privacy, informed consent, and effective moderation shape every product decision at Kinxter.",
+      "items": [
+        {
+          "number": "01",
+          "title": "Privacy from the start",
+          "description": "You decide what you share and with whom. Your profile visibility stays under your control."
+        },
+        {
+          "number": "02",
+          "title": "Consent and boundaries",
+          "description": "Clear expectations support connections built on communication, respect, and informed consent."
+        },
+        {
+          "number": "03",
+          "title": "Active moderation",
+          "description": "Reporting and blocking tools help protect a safer space for every adult in the community."
+        }
+      ],
+      "statement": "No pressure. No judgment. Full control over your presence."
+    },
+    "panelNavigation": {
+      "ariaLabel": "Navigation between sections",
+      "previous": "Previous section",
+      "next": "Next section"
+    },
+    "footer": {
+      "description": "A private social platform for adults in kink and fetish communities.",
+      "values": "18+ · Respect · Consent · Privacy",
+      "kinxterAriaLabel": "Kinxter",
+      "kinxterTitle": "Kinxter",
+      "about": "About the platform",
+      "communities": "Communities",
+      "safety": "Safety",
+      "contact": "Contact",
+      "documentsAriaLabel": "Legal documents",
+      "documentsTitle": "Documents",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Use",
+      "cookies": "Cookie Policy",
+      "communityRules": "Community Guidelines",
+      "language": "Language",
+      "polish": "Polski",
+      "english": "English",
+      "german": "Deutsch",
+      "soon": "coming soon",
+      "adultsOnly": "This platform is for adults only."
+    }
+  },
+  "legal": {
+    "metadata": {
+      "title": "Kinxter documents and policies",
+      "description": "Kinxter's Privacy Policy, Terms of Use, Cookie Policy, and Community Guidelines."
+    },
+    "backHome": "Back to the home page",
+    "eyebrow": "Document center",
+    "navigationTitle": "Documents",
+    "navigationAriaLabel": "Document navigation",
+    "title": "Kinxter documents and policies",
+    "introduction": "This page provides the structure for our final documents. The legal content still needs to be completed and approved before the platform launches.",
+    "status": "Document in progress",
+    "documents": [
+      {
+        "id": "privacy",
+        "title": "Privacy Policy",
+        "description": "This document will describe the data we process, the applicable legal bases, retention periods, and user rights."
+      },
+      {
+        "id": "terms",
+        "title": "Terms of Use",
+        "description": "This document will define the rules for using Kinxter, age requirements, user responsibilities, and account policies."
+      },
+      {
+        "id": "cookies",
+        "title": "Cookie Policy",
+        "description": "This document will explain which cookies are essential and how optional consent choices will be handled."
+      },
+      {
+        "id": "community",
+        "title": "Community Guidelines",
+        "description": "This document will describe our standards for informed consent, privacy, moderation, reporting, and prohibited content."
+      }
+    ]
+  }
+}
