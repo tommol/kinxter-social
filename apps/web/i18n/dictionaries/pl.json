@@ -117,6 +117,8 @@
     },
     "backHome": "Powrót na stronę główną",
     "eyebrow": "Centrum dokumentów",
+    "navigationTitle": "Dokumenty",
+    "navigationAriaLabel": "Nawigacja po dokumentach",
     "title": "Dokumenty i zasady Kinxter",
     "introduction": "Ta strona przygotowuje strukturę pod finalne dokumenty. Treści prawne wymagają jeszcze uzupełnienia i zatwierdzenia przed uruchomieniem platformy.",
     "status": "Dokument w przygotowaniu",
